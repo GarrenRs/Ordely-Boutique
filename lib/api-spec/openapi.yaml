@@ -1,0 +1,1923 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Conversational Order Operating System API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: stores
+    description: Store management
+  - name: landing-pages
+    description: Landing page management
+  - name: orders
+    description: Order management
+  - name: customers
+    description: Customer management
+  - name: confirmations
+    description: Order confirmation management
+  - name: reports
+    description: Daily reports
+  - name: delivery-zones
+    description: Closed Algeria delivery pricing per store
+  - name: provider
+    description: Provider console operations
+  - name: public
+    description: Public storefront and product order operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Stores ───────────────────────────────────────────────────────────────
+  /public/s/{storeSlug}:
+    get:
+      operationId: getPublicStorePage
+      tags: [public]
+      summary: Get public storefront by store slug
+      parameters:
+        - name: storeSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public store page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicStorePage"
+        "404":
+          description: Store not found
+
+  /public/s/{storeSlug}/p/{productSlug}:
+    get:
+      operationId: getPublicLandingPageByStore
+      tags: [public]
+      summary: Get public product page scoped by store slug
+      parameters:
+        - name: storeSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: productSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public product page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicLandingPage"
+        "404":
+          description: Store or product not found
+
+  /public/s/{storeSlug}/p/{productSlug}/order:
+    post:
+      operationId: createPublicOrderByStore
+      tags: [public]
+      summary: Create order from a store-scoped product page
+      parameters:
+        - name: storeSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: productSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicOrderInput"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrderResult"
+        "404":
+          description: Store or product not found
+        "422":
+          description: Invalid product variant or delivery selection
+
+  /provider/auth/login:
+    post:
+      operationId: providerLogin
+      tags: [provider]
+      summary: Provider login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderLoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderAuthResponse"
+
+  /provider/auth/me:
+    get:
+      operationId: getProviderMe
+      tags: [provider]
+      summary: Get provider session
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderAuthResponse"
+
+  /provider/auth/logout:
+    post:
+      operationId: providerLogout
+      tags: [provider]
+      summary: Provider logout
+      responses:
+        "200":
+          description: Logged out
+
+  /provider/summary:
+    get:
+      operationId: getProviderSummary
+      tags: [provider]
+      summary: Provider console summary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderSummary"
+
+  /provider/stores:
+    get:
+      operationId: listProviderStores
+      tags: [provider]
+      summary: List stores for provider console
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProviderStore"
+    post:
+      operationId: createProviderStore
+      tags: [provider]
+      summary: Create store and merchant account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderStoreInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderStoreCreated"
+
+  /provider/stores/{storeId}:
+    patch:
+      operationId: updateProviderStore
+      tags: [provider]
+      summary: Update store activation or basic info
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderStoreUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderStore"
+
+  /provider/stores/{storeId}/reset-password:
+    post:
+      operationId: resetProviderStorePassword
+      tags: [provider]
+      summary: Reset merchant password
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderPasswordResetInput"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderPasswordResetResult"
+
+  /stores:
+    get:
+      operationId: listStores
+      tags: [stores]
+      summary: List all stores
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Store"
+  /stores/{storeId}:
+    get:
+      operationId: getStore
+      tags: [stores]
+      summary: Get a store by ID
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateStore
+      tags: [stores]
+      summary: Update a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
+  # ─── Landing Pages ─────────────────────────────────────────────────────────
+  /stores/{storeId}/landing-pages:
+    get:
+      operationId: listLandingPages
+      tags: [landing-pages]
+      summary: List landing pages for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LandingPage"
+    post:
+      operationId: createLandingPage
+      tags: [landing-pages]
+      summary: Create a landing page
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LandingPageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LandingPage"
+
+  /stores/{storeId}/landing-pages/{pageId}:
+    get:
+      operationId: getLandingPage
+      tags: [landing-pages]
+      summary: Get a landing page
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LandingPage"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateLandingPage
+      tags: [landing-pages]
+      summary: Update a landing page
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LandingPageUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LandingPage"
+    delete:
+      operationId: deleteLandingPage
+      tags: [landing-pages]
+      summary: Delete a landing page
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /stores/{storeId}/product-categories:
+    get:
+      operationId: listProductCategories
+      tags: [product-categories]
+      summary: List product categories for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductCategory"
+    post:
+      operationId: createProductCategory
+      tags: [product-categories]
+      summary: Create a product category
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductCategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductCategory"
+
+  /stores/{storeId}/product-categories/{categoryId}:
+    patch:
+      operationId: updateProductCategory
+      tags: [product-categories]
+      summary: Update a product category
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductCategoryUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductCategory"
+    delete:
+      operationId: deleteProductCategory
+      tags: [product-categories]
+      summary: Delete a product category
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /stores/{storeId}/delivery-zones:
+    get:
+      operationId: listDeliveryZones
+      tags: [delivery-zones]
+      summary: List fixed Algeria delivery zones for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryZone"
+
+  /stores/{storeId}/delivery-zones/{wilayaCode}:
+    patch:
+      operationId: updateDeliveryZone
+      tags: [delivery-zones]
+      summary: Update delivery pricing for one fixed wilaya
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: wilayaCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryZoneUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryZone"
+
+  /stores/{storeId}/delivery-zones/{wilayaCode}/communes:
+    get:
+      operationId: listDeliveryCommunes
+      tags: [delivery-zones]
+      summary: List communes for one wilaya with store availability
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: wilayaCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryCommune"
+    patch:
+      operationId: updateDeliveryCommunes
+      tags: [delivery-zones]
+      summary: Enable or disable communes for one wilaya
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: wilayaCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryCommunesUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryCommune"
+
+  # ─── Orders ────────────────────────────────────────────────────────────────
+  /stores/{storeId}/uploads/product-image:
+    post:
+      operationId: uploadProductImage
+      tags: [uploads]
+      summary: Upload a product image for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageUploadInput"
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageUploadResult"
+
+  /stores/{storeId}/orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List orders for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdersPage"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create an order (from landing page)
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /stores/{storeId}/orders/{orderId}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get an order
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Update order status or notes
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /stores/{storeId}/orders/summary:
+    get:
+      operationId: getOrdersSummary
+      tags: [orders]
+      summary: Get order counts by status (dashboard summary)
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdersSummary"
+
+  # ─── Customers ─────────────────────────────────────────────────────────────
+  /stores/{storeId}/customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List customers for a store
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+
+  /stores/{storeId}/customers/{customerId}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get a customer with their order history
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerWithOrders"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update customer notes
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  # ─── Confirmations ─────────────────────────────────────────────────────────
+  /stores/{storeId}/confirmations:
+    get:
+      operationId: listConfirmations
+      tags: [confirmations]
+      summary: List pending confirmation orders
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+
+  /stores/{storeId}/orders/{orderId}/confirm:
+    post:
+      operationId: confirmOrder
+      tags: [confirmations]
+      summary: Confirm an order
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmationInput"
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /stores/{storeId}/orders/{orderId}/reject:
+    post:
+      operationId: rejectOrder
+      tags: [confirmations]
+      summary: Reject an order
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectionInput"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  # ─── Reports ───────────────────────────────────────────────────────────────
+  /stores/{storeId}/reports/daily:
+    get:
+      operationId: getDailyReport
+      tags: [reports]
+      summary: Get daily report for today
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReport"
+
+  /stores/{storeId}/reports/weekly:
+    get:
+      operationId: getWeeklyReport
+      tags: [reports]
+      summary: Get the last 7 days order trend
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyReport"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    PublicStoreInfo:
+      type: object
+      required: [id, slug, name, ownerName, phone, city]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+
+    PublicStoreCategory:
+      type: object
+      required: [id, name, slug, isDefault]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        isDefault:
+          type: boolean
+
+    PublicStoreProduct:
+      type: object
+      required: [id, productName, price, description, slug, productImages, availableSizes, availableColors, themeColor]
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: ["integer", "null"]
+        productName:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        slug:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        productImages:
+          type: array
+          items:
+            type: string
+        availableSizes:
+          type: array
+          items:
+            type: string
+        availableColors:
+          type: array
+          items:
+            type: string
+        themeColor:
+          type: string
+
+    PublicStorePage:
+      type: object
+      required: [store, categories, products]
+      properties:
+        store:
+          $ref: "#/components/schemas/PublicStoreInfo"
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicStoreCategory"
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicStoreProduct"
+
+    PublicCommune:
+      type: object
+      required: [id, name, dairaName]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        dairaName:
+          type: string
+
+    PublicDeliveryZone:
+      type: object
+      required: [id, wilayaCode, wilayaName, homeFee, officeFee, returnFee, communes]
+      properties:
+        id:
+          type: integer
+        wilayaCode:
+          type: string
+        wilayaName:
+          type: string
+        homeFee:
+          type: ["number", "null"]
+        officeFee:
+          type: ["number", "null"]
+        returnFee:
+          type: number
+        communes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicCommune"
+
+    PublicLandingPage:
+      type: object
+      required: [productName, price, description, productImages, availableSizes, availableColors, deliveryZones, galleryDisplay, themeColor, storeId]
+      properties:
+        productName:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        productImages:
+          type: array
+          items:
+            type: string
+        availableSizes:
+          type: array
+          items:
+            type: string
+        availableColors:
+          type: array
+          items:
+            type: string
+        deliveryZones:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicDeliveryZone"
+        galleryDisplay:
+          type: string
+          enum: [carousel, grid]
+        themeColor:
+          type: string
+        deliveryInfo:
+          type: ["string", "null"]
+        whatsappNumber:
+          type: ["string", "null"]
+        storeId:
+          type: integer
+
+    PublicOrderInput:
+      type: object
+      required: [customerName, customerPhone, deliveryZoneId, deliveryCommuneName, deliveryMethod]
+      properties:
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerCity:
+          type: string
+        customerAddress:
+          type: string
+        deliveryZoneId:
+          type: integer
+        deliveryCommuneName:
+          type: string
+        deliveryMethod:
+          type: string
+          enum: [HOME, OFFICE]
+        selectedSize:
+          type: string
+        selectedColor:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+        notes:
+          type: string
+
+    PublicOrderResult:
+      type: object
+      required: [id, productName, totalPrice, deliveryFee, payableTotal, status]
+      properties:
+        id:
+          type: integer
+        productName:
+          type: string
+        totalPrice:
+          type: number
+        deliveryFee:
+          type: number
+        payableTotal:
+          type: number
+        status:
+          type: string
+
+    ProviderUser:
+      type: object
+      required: [id, email, name]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+
+    ProviderLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    ProviderAuthResponse:
+      type: object
+      properties:
+        user:
+          anyOf:
+            - $ref: "#/components/schemas/ProviderUser"
+            - type: "null"
+
+    ProviderSummary:
+      type: object
+      required: [storesTotal, storesActive, storesInactive, todayOrders, todayConfirmed, todayReturned]
+      properties:
+        storesTotal:
+          type: integer
+        storesActive:
+          type: integer
+        storesInactive:
+          type: integer
+        todayOrders:
+          type: integer
+        todayConfirmed:
+          type: integer
+        todayReturned:
+          type: integer
+
+    ProviderStore:
+      type: object
+      required: [id, name, slug, ownerName, phone, city, isActive, ordersCount, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        merchantEmail:
+          type: ["string", "null"]
+        ordersCount:
+          type: integer
+        createdAt:
+          type: string
+
+    ProviderStoreInput:
+      type: object
+      required: [storeName, ownerName, phone, city, merchantEmail]
+      properties:
+        storeName:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        merchantEmail:
+          type: string
+        merchantPassword:
+          type: string
+        storeSlug:
+          type: string
+
+    ProviderStoreUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        isActive:
+          type: boolean
+
+    ProviderStoreCreated:
+      type: object
+      required: [store, merchantPassword]
+      properties:
+        store:
+          $ref: "#/components/schemas/ProviderStore"
+        merchantPassword:
+          type: string
+
+    ProviderPasswordResetInput:
+      type: object
+      properties:
+        password:
+          type: string
+
+    ProviderPasswordResetResult:
+      type: object
+      required: [merchantEmail, merchantPassword]
+      properties:
+        merchantEmail:
+          type: string
+        merchantPassword:
+          type: string
+
+    # ─── Store ───────────────────────────────────────────────────────────────
+    Store:
+      type: object
+      required: [id, name, slug, ownerName, phone, city, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    StoreInput:
+      type: object
+      required: [name, slug, ownerName, phone, city]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        logoUrl:
+          type: string
+
+    StoreUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    # ─── Landing Page ─────────────────────────────────────────────────────────
+    ProductCategory:
+      type: object
+      required: [id, storeId, name, slug, isDefault, isActive, sortOrder, productsCount, createdAt]
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        isDefault:
+          type: boolean
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        productsCount:
+          type: integer
+        createdAt:
+          type: string
+
+    ProductCategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        isActive:
+          type: boolean
+
+    ProductCategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        isActive:
+          type: boolean
+
+    LandingPage:
+      type: object
+      required: [id, storeId, productName, price, description, template, slug, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        categoryId:
+          type: ["integer", "null"]
+        productName:
+          type: string
+        price:
+          type: number
+        description:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        productImages:
+          type: array
+          items:
+            type: string
+        availableSizes:
+          type: array
+          items:
+            type: string
+        availableColors:
+          type: array
+          items:
+            type: string
+        galleryDisplay:
+          type: string
+          enum: [carousel, grid]
+        themeColor:
+          type: string
+        template:
+          type: string
+          enum: [classic, bold, minimal]
+        slug:
+          type: string
+        deliveryInfo:
+          type: ["string", "null"]
+        whatsappNumber:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        ordersCount:
+          type: integer
+        createdAt:
+          type: string
+
+    LandingPageInput:
+      type: object
+      required: [productName, price, description, template, slug]
+      properties:
+        productName:
+          type: string
+        categoryId:
+          type: integer
+        price:
+          type: number
+        description:
+          type: string
+        imageUrl:
+          type: string
+        productImages:
+          type: array
+          items:
+            type: string
+        availableSizes:
+          type: array
+          items:
+            type: string
+        availableColors:
+          type: array
+          items:
+            type: string
+        galleryDisplay:
+          type: string
+          enum: [carousel, grid]
+        themeColor:
+          type: string
+        template:
+          type: string
+          enum: [classic, bold, minimal]
+        slug:
+          type: string
+        deliveryInfo:
+          type: string
+        whatsappNumber:
+          type: string
+
+    LandingPageUpdate:
+      type: object
+      properties:
+        productName:
+          type: string
+        categoryId:
+          type: ["integer", "null"]
+        price:
+          type: number
+        description:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        productImages:
+          type: array
+          items:
+            type: string
+        availableSizes:
+          type: array
+          items:
+            type: string
+        availableColors:
+          type: array
+          items:
+            type: string
+        galleryDisplay:
+          type: string
+          enum: [carousel, grid]
+        themeColor:
+          type: string
+        template:
+          type: string
+          enum: [classic, bold, minimal]
+        slug:
+          type: string
+        deliveryInfo:
+          type: ["string", "null"]
+        whatsappNumber:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    # Delivery Zones
+    DeliveryMethod:
+      type: string
+      enum: [HOME, OFFICE]
+
+    DeliveryZone:
+      type: object
+      required: [id, wilayaCode, wilayaName, homeFee, officeFee, returnFee, isActive]
+      properties:
+        id:
+          type: ["integer", "null"]
+        storeId:
+          type: integer
+        wilayaCode:
+          type: string
+        wilayaName:
+          type: string
+        homeFee:
+          type: ["number", "null"]
+        officeFee:
+          type: ["number", "null"]
+        returnFee:
+          type: number
+        isActive:
+          type: boolean
+        communes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlgeriaCommune"
+        createdAt:
+          type: string
+
+    AlgeriaCommune:
+      type: object
+      required: [id, name, dairaName]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        dairaName:
+          type: string
+
+    DeliveryCommune:
+      type: object
+      required: [id, name, dairaName, isActive]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        dairaName:
+          type: string
+        isActive:
+          type: boolean
+
+    DeliveryCommunesUpdate:
+      type: object
+      required: [communes]
+      properties:
+        communes:
+          type: array
+          items:
+            type: object
+            required: [name, isActive]
+            properties:
+              name:
+                type: string
+              isActive:
+                type: boolean
+
+    DeliveryZoneUpdate:
+      type: object
+      properties:
+        homeFee:
+          type: ["number", "null"]
+        officeFee:
+          type: ["number", "null"]
+        returnFee:
+          type: number
+        isActive:
+          type: boolean
+
+    # ─── Order ────────────────────────────────────────────────────────────────
+    OrderStatus:
+      type: string
+      enum:
+        - NEW
+        - PENDING_CONFIRMATION
+        - CONFIRMED
+        - SHIPPED
+        - DELIVERED
+        - RETURNED
+        - CANCELLED
+        - REJECTED
+
+    Order:
+      type: object
+      required: [id, storeId, landingPageId, customerName, customerPhone, customerCity, quantity, totalPrice, status, createdAt]
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        landingPageId:
+          type: integer
+        landingPageName:
+          type: ["string", "null"]
+        productImageUrl:
+          type: ["string", "null"]
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerCity:
+          type: string
+        customerAddress:
+          type: ["string", "null"]
+        deliveryZoneId:
+          type: ["integer", "null"]
+        deliveryWilayaCode:
+          type: ["string", "null"]
+        deliveryWilayaName:
+          type: ["string", "null"]
+        deliveryCommuneName:
+          type: ["string", "null"]
+        deliveryDairaName:
+          type: ["string", "null"]
+        deliveryMethod:
+          anyOf:
+            - $ref: "#/components/schemas/DeliveryMethod"
+            - type: "null"
+        deliveryFee:
+          type: number
+        returnFee:
+          type: number
+        payableTotal:
+          type: number
+        selectedSize:
+          type: ["string", "null"]
+        selectedColor:
+          type: ["string", "null"]
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        notes:
+          type: ["string", "null"]
+        confirmedAt:
+          type: ["string", "null"]
+        shippedAt:
+          type: ["string", "null"]
+        deliveredAt:
+          type: ["string", "null"]
+        returnedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    OrderInput:
+      type: object
+      required: [landingPageId, customerName, customerPhone, customerCity, deliveryZoneId, deliveryCommuneName, deliveryMethod, quantity]
+      properties:
+        landingPageId:
+          type: integer
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerCity:
+          type: string
+        customerAddress:
+          type: string
+        deliveryZoneId:
+          type: integer
+        deliveryCommuneName:
+          type: string
+        deliveryMethod:
+          $ref: "#/components/schemas/DeliveryMethod"
+        selectedSize:
+          type: string
+        selectedColor:
+          type: string
+        quantity:
+          type: integer
+        notes:
+          type: string
+
+    OrderUpdate:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        notes:
+          type: ["string", "null"]
+        customerPhone:
+          type: string
+        customerCity:
+          type: string
+        customerAddress:
+          type: ["string", "null"]
+
+    ImageUploadInput:
+      type: object
+      required: [fileName, contentType, data]
+      properties:
+        fileName:
+          type: string
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        data:
+          type: string
+
+    ImageUploadResult:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    OrdersPage:
+      type: object
+      required: [orders, total, page, limit]
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    OrdersSummary:
+      type: object
+      required: [total, new, pendingConfirmation, confirmed, shipped, delivered, returned, cancelled, rejected]
+      properties:
+        total:
+          type: integer
+        new:
+          type: integer
+        pendingConfirmation:
+          type: integer
+        confirmed:
+          type: integer
+        shipped:
+          type: integer
+        delivered:
+          type: integer
+        returned:
+          type: integer
+        cancelled:
+          type: integer
+        rejected:
+          type: integer
+        totalRevenue:
+          type: number
+        deliveryRevenue:
+          type: number
+        returnLoss:
+          type: number
+        netRevenue:
+          type: number
+
+    # ─── Customer ─────────────────────────────────────────────────────────────
+    Customer:
+      type: object
+      required: [id, storeId, name, phone, city, ordersCount, createdAt]
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        notes:
+          type: ["string", "null"]
+        ordersCount:
+          type: integer
+        totalSpent:
+          type: number
+        createdAt:
+          type: string
+
+    CustomerWithOrders:
+      type: object
+      required: [id, storeId, name, phone, city, ordersCount, createdAt, orders]
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        notes:
+          type: ["string", "null"]
+        ordersCount:
+          type: integer
+        totalSpent:
+          type: number
+        createdAt:
+          type: string
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+
+    CustomerUpdate:
+      type: object
+      properties:
+        notes:
+          type: ["string", "null"]
+
+    # ─── Confirmation ─────────────────────────────────────────────────────────
+    ConfirmationInput:
+      type: object
+      properties:
+        notes:
+          type: string
+
+    RejectionInput:
+      type: object
+      properties:
+        notes:
+          type: string
+
+    # ─── Reports ──────────────────────────────────────────────────────────────
+    DailyReport:
+      type: object
+      required: [date, totalOrders, newOrders, confirmed, shipped, delivered, returned, cancelled, rejected, revenue]
+      properties:
+        date:
+          type: string
+        totalOrders:
+          type: integer
+        newOrders:
+          type: integer
+        pendingConfirmation:
+          type: integer
+        confirmed:
+          type: integer
+        shipped:
+          type: integer
+        delivered:
+          type: integer
+        returned:
+          type: integer
+        cancelled:
+          type: integer
+        rejected:
+          type: integer
+        revenue:
+          type: number
+        deliveryRevenue:
+          type: number
+        returnLoss:
+          type: number
+        netRevenue:
+          type: number

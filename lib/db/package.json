@@ -1,0 +1,41 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "push": "node --env-file-if-exists=../../.env ./node_modules/drizzle-kit/bin.cjs push --config ./drizzle.config.ts",
+    "push-force": "node --env-file-if-exists=../../.env ./node_modules/drizzle-kit/bin.cjs push --force --config ./drizzle.config.ts",
+    "db:prepare": "npm run push && npm run ensure-store-slugs && npm run ensure-returned-status && npm run ensure-delivery-system && npm run ensure-delivery-communes && npm run ensure-order-product-images && npm run ensure-landing-page-store-slugs && npm run ensure-landing-page-transport-mode && npm run ensure-merchant-lead-conversion && npm run ensure-sessions",
+    "ensure-store-slugs": "node --env-file-if-exists=../../.env ./scripts/ensure-store-slugs.mjs",
+    "ensure-returned-status": "node --env-file-if-exists=../../.env ./scripts/ensure-returned-status.mjs",
+    "ensure-delivery-system": "node --env-file-if-exists=../../.env ./scripts/ensure-delivery-system.mjs",
+    "ensure-delivery-communes": "node --env-file-if-exists=../../.env ./scripts/ensure-delivery-communes.mjs",
+    "ensure-order-product-images": "node --env-file-if-exists=../../.env ./scripts/ensure-order-product-images.mjs",
+    "ensure-landing-page-store-slugs": "node --env-file-if-exists=../../.env ./scripts/ensure-landing-page-store-slugs.mjs",
+    "ensure-landing-page-transport-mode": "node --env-file-if-exists=../../.env ./scripts/ensure-landing-page-transport-mode.mjs",
+    "ensure-merchant-lead-conversion": "node --env-file-if-exists=../../.env ./scripts/ensure-merchant-lead-conversion.mjs",
+    "ensure-sessions": "node --env-file-if-exists=../../.env ./scripts/ensure-sessions.mjs",
+    "reset-schema": "node --env-file-if-exists=../../.env ./scripts/reset-order-os-schema.mjs",
+    "reset": "npm run reset-schema && npm run push-force && npm run seed",
+    "seed": "node --env-file-if-exists=../../.env ./scripts/seed-dev.mjs",
+    "tenant:create": "node --env-file-if-exists=../../.env ./scripts/create-tenant.mjs",
+    "provider:create": "node --env-file-if-exists=../../.env ./scripts/create-provider-user.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "catalog:",
+    "drizzle-zod": "^0.8.3",
+    "pg": "^8.20.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "^8.18.0",
+    "drizzle-kit": "^0.31.9"
+  }
+}

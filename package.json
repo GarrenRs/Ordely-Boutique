@@ -1,0 +1,36 @@
+{
+  "name": "conversational-order-os",
+  "version": "0.0.0",
+  "license": "MIT",
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "build": "npm run typecheck && npm --prefix apps/api-server run build && npm --prefix apps/web run build",
+    "vercel:build": "npm run typecheck && npm --prefix apps/api-server run build && npm --prefix apps/web run build",
+    "db:push": "npm --prefix lib/db run push",
+    "db:push-force": "npm --prefix lib/db run push-force",
+    "db:prepare": "npm --prefix lib/db run db:prepare",
+    "db:reset": "npm --prefix lib/db run reset",
+    "db:reset-schema": "npm --prefix lib/db run reset-schema",
+    "db:seed": "npm --prefix lib/db run seed",
+    "tenant:create": "npm --prefix lib/db run tenant:create",
+    "provider:create": "npm --prefix lib/db run provider:create",
+    "delivery:ensure-communes": "npm --prefix lib/db run ensure-delivery-communes",
+    "orders:ensure-product-images": "npm --prefix lib/db run ensure-order-product-images",
+    "landing-pages:ensure-store-slugs": "npm --prefix lib/db run ensure-landing-page-store-slugs",
+    "sessions:ensure": "npm --prefix lib/db run ensure-sessions",
+    "typecheck:libs": "tsc --build",
+    "typecheck:apps": "npm --prefix apps/api-server run typecheck && npm --prefix apps/web run typecheck",
+    "typecheck": "npm run typecheck:libs && npm run typecheck:apps"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "path-to-regexp": "^8.4.0"
+    }
+  }
+}
