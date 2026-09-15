@@ -17,6 +17,11 @@ export interface ProviderStore {
   logoUrl?: string | null;
   isActive: boolean;
   /** @nullable */
+  subscriptionPlanDays?: number | null;
+  /** @nullable */
+  subscriptionExpiresAt?: string | null;
+  subscriptionStatus?: "active" | "expiringSoon" | "expired" | "suspended" | "noSubscription";
+  /** @nullable */
   merchantEmail?: string | null;
   ordersCount: number;
   createdAt: string;

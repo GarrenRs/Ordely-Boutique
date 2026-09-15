@@ -13,6 +13,7 @@ interface ProviderStore {
   isActive: boolean;
   subscriptionPlanDays: number | null;
   subscriptionExpiresAt: string | null;
+  subscriptionStatus?: "active" | "expiringSoon" | "expired" | "suspended" | "noSubscription";
   merchantEmail: string | null;
   ordersCount: number;
   createdAt: string;
@@ -59,8 +60,8 @@ function subscriptionPlanLabel(days: number | null) {
 function subscriptionInfo(store: ProviderStore) {
   if (!store.subscriptionExpiresAt) {
     return {
-      label: "غير محدد",
-      detail: "اضبط مدة التشغيل",
+      label: store.subscriptionStatus === "suspended" ? "موقوف" : "غير محدد",
+      detail: store.subscriptionStatus === "suspended" ? "المتجر غير مفعّل" : "اضبط مدة التشغيل",
       planLabel: subscriptionPlanLabel(store.subscriptionPlanDays),
       tone: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
       expired: false,
@@ -71,7 +72,20 @@ function subscriptionInfo(store: ProviderStore) {
   const expiresAt = new Date(store.subscriptionExpiresAt);
   const now = new Date();
   const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / 86_400_000);
-  if (daysLeft <= 0) {
+  const serverStatus = store.subscriptionStatus;
+
+  if (serverStatus === "suspended") {
+    return {
+      label: "موقوف",
+      detail: "المتجر غير مفعّل",
+      planLabel: subscriptionPlanLabel(store.subscriptionPlanDays),
+      tone: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+      expired: true,
+      daysLeft,
+    };
+  }
+
+  if (serverStatus === "expired" || (serverStatus === undefined && daysLeft <= 0)) {
     return {
       label: "منتهي",
       detail: "المتجر العام متوقف",
@@ -82,7 +96,7 @@ function subscriptionInfo(store: ProviderStore) {
     };
   }
 
-  if (daysLeft <= 7) {
+  if (serverStatus === "expiringSoon" || (serverStatus === undefined && daysLeft <= 7)) {
     return {
       label: `${daysLeft} يوم`,
       detail: "قريب الانتهاء",

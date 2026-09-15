@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { AppRequest, AppResponse } from "../types/http.js";
-import { and, auditLogsTable, customersTable, db, deliveryZonesTable, eq, landingPagesTable, ne, ordersTable, sql } from "@workspace/db";
+import { and, auditLogsTable, customersTable, db, deliveryZonesTable, eq, landingPagesTable, ne, ordersTable, sql, storesTable } from "@workspace/db";
 import {
   ListOrdersParams,
   CreateOrderParams,
@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-zod";
 import { isValidTransition } from "../lib/transitions.js";
 import { logAudit } from "../lib/audit.js";
+import { computeStoreLifecycle } from "../lib/storeLifecycle.js";
 
 export const ordersRouter = Router({ mergeParams: true });
 
@@ -53,6 +54,7 @@ function formatOrder(
     shippedAt: o.shippedAt ?? null,
     deliveredAt: o.deliveredAt ?? null,
     returnedAt: o.returnedAt ?? null,
+    returnReason: o.returnReason ?? null,
     landingPageName: landingPageName ?? null,
     productImageUrl: o.productImageUrl ?? landingPageImage ?? null,
   };
@@ -163,6 +165,17 @@ ordersRouter.post("/", async (req: AppRequest, res: AppResponse): Promise<void> 
   });
   const body = CreateOrderBody.safeParse(req.body);
   if (!params.success || !body.success) { res.status(400).json({ error: "Invalid request" }); return; }
+
+  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, params.data.storeId));
+  const lifecycle = store ? computeStoreLifecycle(store) : null;
+  if (lifecycle && lifecycle.status === "EXPIRED") {
+    res.status(422).json({ error: "اشتراك المتجر منتهي" });
+    return;
+  }
+  if (lifecycle && lifecycle.status === "SUSPENDED") {
+    res.status(422).json({ error: "المتجر موقوف حالياً ولا يقبل طلبات جديدة" });
+    return;
+  }
 
   const [page] = await db
     .select()
@@ -352,11 +365,23 @@ ordersRouter.patch("/:orderId", async (req: AppRequest, res: AppResponse): Promi
     }
   }
 
+  let returnReason: string | null = null;
+  if (body.data.status === "RETURNED") {
+    returnReason = body.data.returnReason?.trim() || null;
+    if (!returnReason) {
+      res.status(422).json({ error: "سبب الإرجاع مطلوب" });
+      return;
+    }
+  }
+
   const updateData: Record<string, unknown> = { ...body.data };
   if (body.data.status === "CONFIRMED") updateData.confirmedAt = new Date();
   if (body.data.status === "SHIPPED") updateData.shippedAt = new Date();
   if (body.data.status === "DELIVERED") updateData.deliveredAt = new Date();
-  if (body.data.status === "RETURNED") updateData.returnedAt = new Date();
+  if (body.data.status === "RETURNED") {
+    updateData.returnedAt = new Date();
+    updateData.returnReason = returnReason;
+  }
 
   const [order] = await db.update(ordersTable)
     .set(updateData)
@@ -379,7 +404,7 @@ ordersRouter.patch("/:orderId", async (req: AppRequest, res: AppResponse): Promi
       action: "STATUS_CHANGED",
       fromStatus: existing.status,
       toStatus: body.data.status,
-      note: body.data.notes ?? undefined,
+      note: body.data.status === "RETURNED" ? returnReason ?? undefined : (body.data.notes ?? undefined),
     });
   }
 

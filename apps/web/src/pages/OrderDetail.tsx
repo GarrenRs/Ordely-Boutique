@@ -34,9 +34,10 @@ const STATUS_TRANSITIONS: Record<string, { value: string; label: string }[]> = {
   ],
   SHIPPED: [
     { value: "DELIVERED", label: "تم التسليم" },
-    { value: "RETURNED", label: "استرجاع" },
   ],
-  DELIVERED: [],
+  DELIVERED: [
+    { value: "RETURNED", label: "إرجاع الطلب" },
+  ],
   RETURNED: [],
   CANCELLED: [],
   REJECTED: [],
@@ -78,6 +79,8 @@ export default function OrderDetail() {
   const [editCity, setEditCity] = useState("");
   const [editAddress, setEditAddress] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
 
   const { data: order, isLoading } = useGetOrder(STORE_ID, Number(orderId), {
     query: { queryKey: getGetOrderQueryKey(STORE_ID, Number(orderId)) },
@@ -147,6 +150,32 @@ export default function OrderDetail() {
     });
   };
 
+  const handleAction = (value: string) => {
+    if (value === "RETURNED") {
+      setReturnReason("");
+      setReturnOpen(true);
+      return;
+    }
+    handleStatusChange(value);
+  };
+
+  const confirmReturn = () => {
+    const reason = returnReason.trim();
+    if (!reason) {
+      toast({ title: "سبب الإرجاع مطلوب", variant: "destructive" });
+      return;
+    }
+    setReturnOpen(false);
+    updateOrder.mutate({
+      storeId: STORE_ID,
+      orderId: Number(orderId),
+      data: {
+        status: "RETURNED",
+        returnReason: reason,
+      },
+    });
+  };
+
   const startEdit = () => {
     setEditCity(order.customerCity ?? "");
     setEditAddress((order.customerAddress as string | null) ?? "");
@@ -186,23 +215,25 @@ export default function OrderDetail() {
 
         {transitions.length > 0 && (
           <div>
-            <div className="mb-3">
-              <label className="text-xs font-medium text-muted-foreground block mb-1.5">ملاحظة على الانتقال (اختيارية)</label>
-              <input
-                data-testid="input-notes"
-                value={statusNote}
-                onChange={e => setStatusNote(e.target.value)}
-                placeholder="سبب التغيير..."
-                className="w-full h-8 bg-background border border-input rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-right"
-              />
-            </div>
+            {transitions.some(t => t.value !== "RETURNED") && (
+              <div className="mb-3">
+                <label className="text-xs font-medium text-muted-foreground block mb-1.5">ملاحظة على الانتقال (اختيارية)</label>
+                <input
+                  data-testid="input-notes"
+                  value={statusNote}
+                  onChange={e => setStatusNote(e.target.value)}
+                  placeholder="سبب التغيير..."
+                  className="w-full h-8 bg-background border border-input rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-right"
+                />
+              </div>
+            )}
             <div className="flex gap-2 flex-wrap">
               {transitions.map(t => (
                 <button
                   key={t.value}
                   data-testid={`btn-status-${t.value}`}
                   disabled={updateOrder.isPending}
-                  onClick={() => handleStatusChange(t.value)}
+                  onClick={() => handleAction(t.value)}
                   className={`px-4 h-9 rounded-md text-sm font-medium transition-colors disabled:opacity-50 ${
                     t.value === "CANCELLED" || t.value === "REJECTED" || t.value === "RETURNED"
                       ? "bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20"
@@ -371,6 +402,12 @@ export default function OrderDetail() {
               <span className="font-medium tabular-nums text-destructive">{formatCurrency(order.returnFee ?? 0)}</span>
             </div>
           )}
+          {order.returnReason && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">سبب الإرجاع</span>
+              <span className="font-medium">{order.returnReason}</span>
+            </div>
+          )}
           <div className="flex justify-between pt-2 border-t border-border">
             <span className="text-muted-foreground font-semibold">الإجمالي المطلوب</span>
             <span className="font-bold tabular-nums text-foreground">{formatCurrency(order.payableTotal ?? order.totalPrice)}</span>
@@ -418,6 +455,59 @@ export default function OrderDetail() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Return confirmation modal */}
+      {returnOpen && (
+        <div
+          className="fixed inset-0 z-[72] flex items-center justify-center p-4 bg-black/40"
+          onClick={() => setReturnOpen(false)}
+        >
+          <section
+            className="w-full max-w-md rounded-lg border border-card-border bg-card p-5 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="return-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="return-title" className="text-base font-bold text-foreground">إرجاع الطلب</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              سيتم تحويل الطلب إلى حالة "مسترجع". سبب الإرجاع مطلوب.
+            </p>
+            <div className="mt-4">
+              <label htmlFor="return-reason" className="text-xs font-medium text-muted-foreground block mb-1.5">
+                سبب الإرجاع
+              </label>
+              <textarea
+                id="return-reason"
+                data-testid="input-return-reason"
+                value={returnReason}
+                onChange={e => setReturnReason(e.target.value)}
+                placeholder="مثال: العميل لم يرغب في المنتج"
+                rows={3}
+                className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring text-right"
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setReturnOpen(false)}
+                className="px-4 h-9 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                data-testid="btn-confirm-return"
+                disabled={updateOrder.isPending}
+                onClick={confirmReturn}
+                className="px-4 h-9 rounded-md text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
+              >
+                تأكيد الإرجاع
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

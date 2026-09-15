@@ -1,14 +1,18 @@
 import { Router } from "express";
 import type { AppRequest, AppResponse } from "../types/http.js";
-import { and, customersTable, db, deliveryCommuneSettingsTable, deliveryZonesTable, eq, landingPagesTable, ordersTable, productCategoriesTable, sql, storesTable } from "@workspace/db";
+import { and, customersTable, db, deliveryCommuneSettingsTable, deliveryZonesTable, eq, landingPagesTable, ordersTable, productCategoriesTable, storesTable } from "@workspace/db";
 import { z } from "zod";
 import { publicOrderLimiter } from "../middleware/rateLimiter.js";
 import { logAudit } from "../lib/audit.js";
 import { findCommuneInWilaya, findWilayaByCode } from "../lib/algeria-locations.js";
+import {
+  effectiveActiveStoreSql,
+  productDataComplete,
+  storeHasUsableDeliveryZone,
+  usableDeliveryZonesForStore,
+} from "../lib/readiness.js";
 
 export const publicRouter = Router();
-
-const effectiveActiveStoreSql = sql`${storesTable.isActive} = true and (${storesTable.subscriptionExpiresAt} is null or ${storesTable.subscriptionExpiresAt} > now())`;
 
 const PublicOrderSchema = z.object({
   customerName: z.string().min(2).max(100),
@@ -63,9 +67,10 @@ async function findActiveStore(storeSlug: string) {
   return store ?? null;
 }
 
-async function findActiveProduct(storeId: number, productSlug: string) {
+async function findPubliclyLiveProduct(storeId: number, productSlug: string) {
   const slug = String(productSlug ?? "").trim();
   if (!slug) return null;
+  if (!(await storeHasUsableDeliveryZone(storeId))) return null;
   const [page] = await db
     .select()
     .from(landingPagesTable)
@@ -91,7 +96,11 @@ async function findActiveLegacyProducts(productSlug: string) {
     ))
     .limit(2);
 
-  return rows.map((row) => row.page);
+  const readyPages: LandingPageRow[] = [];
+  for (const row of rows) {
+    if (await storeHasUsableDeliveryZone(row.page.storeId)) readyPages.push(row.page);
+  }
+  return readyPages;
 }
 
 function formatPublicDeliveryZone(zone: typeof deliveryZonesTable.$inferSelect, disabledCommuneNames: Set<string>) {
@@ -105,31 +114,6 @@ function formatPublicDeliveryZone(zone: typeof deliveryZonesTable.$inferSelect, 
     returnFee: Number(zone.returnFee),
     communes: (sourceWilaya?.communes ?? []).filter((commune) => !disabledCommuneNames.has(`${zone.wilayaCode}:${commune.name}`)),
   };
-}
-
-async function deliveryZonesForStore(storeId: number) {
-  const [deliveryZones, communeSettings] = await Promise.all([
-    db
-      .select()
-      .from(deliveryZonesTable)
-      .where(and(eq(deliveryZonesTable.storeId, storeId), eq(deliveryZonesTable.isActive, true)))
-      .orderBy(deliveryZonesTable.wilayaCode),
-    db
-      .select()
-      .from(deliveryCommuneSettingsTable)
-      .where(eq(deliveryCommuneSettingsTable.storeId, storeId)),
-  ]);
-
-  const disabledCommuneNames = new Set(
-    communeSettings
-      .filter((setting) => !setting.isActive)
-      .map((setting) => `${setting.wilayaCode}:${setting.communeName}`),
-  );
-
-  return deliveryZones
-    .filter((zone) => zone.officeFee !== null)
-    .map((zone) => formatPublicDeliveryZone(zone, disabledCommuneNames))
-    .filter((zone) => zone.communes.length > 0);
 }
 
 async function landingPagePayload(page: LandingPageRow) {
@@ -166,7 +150,7 @@ async function landingPagePayload(page: LandingPageRow) {
     transportMode: page.transportMode ?? "DELIVERY_COMPANY",
     deliveryInfo: page.deliveryInfo ?? null,
     whatsappNumber: page.whatsappNumber ?? null,
-    deliveryZones: await deliveryZonesForStore(page.storeId),
+    deliveryZones: (await usableDeliveryZonesForStore(page.storeId)).map((zone) => formatPublicDeliveryZone(zone, new Set<string>())),
     storeId: page.storeId,
     store: store
       ? {
@@ -191,6 +175,10 @@ async function createPublicOrder(page: LandingPageRow, reqBody: unknown) {
   const parsed = PublicOrderSchema.safeParse(reqBody);
   if (!parsed.success) {
     return { status: 400, body: { error: "بيانات غير صحيحة", details: parsed.error.issues } } as const;
+  }
+
+  if (!(await storeHasUsableDeliveryZone(page.storeId))) {
+    return { status: 422, body: { error: "الولاية غير متاحة للتوصيل حاليا" } } as const;
   }
 
   const { customerName, customerPhone, customerAddress, deliveryZoneId, deliveryCommuneName, deliveryMethod, selectedSize, selectedColor, quantity, notes } = parsed.data;
@@ -328,11 +316,14 @@ publicRouter.get("/s/:storeSlug", async (req: AppRequest, res: AppResponse): Pro
     .where(and(eq(productCategoriesTable.storeId, store.id), eq(productCategoriesTable.isActive, true)))
     .orderBy(productCategoriesTable.sortOrder, productCategoriesTable.id);
 
-  const products = await db
+  const storeReady = await storeHasUsableDeliveryZone(store.id);
+
+  const products = (await db
     .select()
     .from(landingPagesTable)
     .where(and(eq(landingPagesTable.storeId, store.id), eq(landingPagesTable.isActive, true)))
-    .orderBy(landingPagesTable.id);
+    .orderBy(landingPagesTable.id))
+    .filter((product) => storeReady && productDataComplete(product));
 
   res.json({
     store: {
@@ -372,7 +363,7 @@ publicRouter.get("/s/:storeSlug/p/:productSlug", async (req: AppRequest, res: Ap
     res.status(404).json({ error: "Store not found" });
     return;
   }
-  const page = await findActiveProduct(store.id, firstParam(req.params.productSlug));
+  const page = await findPubliclyLiveProduct(store.id, firstParam(req.params.productSlug));
   if (!page) {
     res.status(404).json({ error: "المنتج غير متاح" });
     return;
@@ -386,7 +377,7 @@ publicRouter.post("/s/:storeSlug/p/:productSlug/order", publicOrderLimiter, asyn
     res.status(404).json({ error: "Store not found" });
     return;
   }
-  const page = await findActiveProduct(store.id, firstParam(req.params.productSlug));
+  const page = await findPubliclyLiveProduct(store.id, firstParam(req.params.productSlug));
   if (!page) {
     res.status(404).json({ error: "المنتج غير متاح" });
     return;

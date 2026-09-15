@@ -43,6 +43,7 @@ export const ordersTable = appSchema.table("orders", {
   totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
   status: orderStatusEnum("status").notNull().default("NEW"),
   notes: text("notes"),
+  returnReason: text("return_reason"),
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   shippedAt: timestamp("shipped_at", { withTimezone: true }),
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),

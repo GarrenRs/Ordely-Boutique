@@ -7,12 +7,25 @@ import {
   GetStoreParams,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { storeDeliveryReady } from "../lib/readiness.js";
+import { computeStoreLifecycle } from "../lib/storeLifecycle.js";
 
 export const storesRouter = Router();
 
+async function formatStore(store: typeof storesTable.$inferSelect) {
+  const lifecycle = computeStoreLifecycle(store);
+  return {
+    ...store,
+    logoUrl: store.logoUrl ?? null,
+    deliveryReady: await storeDeliveryReady(store.id),
+    storeStatus: lifecycle.status,
+    daysLeft: lifecycle.daysLeft,
+  };
+}
+
 storesRouter.get("/", requireAuth, async (req: AppRequest, res: AppResponse): Promise<void> => {
   const [store] = await db.select().from(storesTable).where(eq(storesTable.id, req.session.storeId!));
-  res.json(store ? [{ ...store, logoUrl: store.logoUrl ?? null }] : []);
+  res.json(store ? [await formatStore(store)] : []);
 });
 
 storesRouter.get("/:storeId", requireAuth, async (req: AppRequest, res: AppResponse): Promise<void> => {
@@ -30,7 +43,7 @@ storesRouter.get("/:storeId", requireAuth, async (req: AppRequest, res: AppRespo
     res.status(404).json({ error: "Store not found" });
     return;
   }
-  res.json({ ...store, logoUrl: store.logoUrl ?? null });
+  res.json(await formatStore(store));
 });
 
 storesRouter.patch("/:storeId", requireAuth, async (req: AppRequest, res: AppResponse): Promise<void> => {
@@ -54,5 +67,5 @@ storesRouter.patch("/:storeId", requireAuth, async (req: AppRequest, res: AppRes
     return;
   }
   req.session.storeName = store.name;
-  res.json({ ...store, logoUrl: store.logoUrl ?? null });
+  res.json(await formatStore(store));
 });

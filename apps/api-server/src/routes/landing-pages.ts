@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { AppRequest, AppResponse } from "../types/http.js";
-import { and, db, eq, landingPagesTable, ne, ordersTable, productCategoriesTable, sql } from "@workspace/db";
+import { and, db, eq, landingPagesTable, ne, ordersTable, productCategoriesTable, sql, storesTable } from "@workspace/db";
 import {
   ListLandingPagesParams,
   CreateLandingPageParams,
@@ -11,6 +11,7 @@ import {
   DeleteLandingPageParams,
 } from "@workspace/api-zod";
 import { ensureDefaultCategory } from "../lib/ensureDefaultCategory.js";
+import { productReadinessReasonWithContext, usableDeliveryZonesForStore } from "../lib/readiness.js";
 
 export const landingPagesRouter = Router({ mergeParams: true });
 
@@ -47,6 +48,29 @@ function formatLandingPage(page: Record<string, unknown>, ordersCount = 0) {
   };
 }
 
+type LandingPageRow = typeof landingPagesTable.$inferSelect;
+type StoreRow = typeof storesTable.$inferSelect;
+
+async function loadStoreReadiness(storeId: number) {
+  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+  const usableZoneCount = (await usableDeliveryZonesForStore(storeId)).length;
+  return { store: store ?? null, usableZoneCount };
+}
+
+async function withReadiness(
+  base: ReturnType<typeof formatLandingPage>,
+  page: LandingPageRow,
+  store: StoreRow | null,
+  usableZoneCount: number,
+) {
+  const reason = store ? await productReadinessReasonWithContext(store, usableZoneCount, page) : "store_inactive";
+  return {
+    ...base,
+    publiclyLive: reason === null,
+    readinessReason: reason,
+  };
+}
+
 landingPagesRouter.get("/", async (req: AppRequest, res: AppResponse): Promise<void> => {
   const params = ListLandingPagesParams.safeParse({
     storeId: Number((req.params as { storeId?: string }).storeId),
@@ -68,7 +92,11 @@ landingPagesRouter.get("/", async (req: AppRequest, res: AppResponse): Promise<v
 
   const countMap = Object.fromEntries(counts.map(c => [c.landingPageId, c.count]));
 
-  res.json(pages.map(p => formatLandingPage(p as unknown as Record<string, unknown>, countMap[p.id] ?? 0)));
+  const { store, usableZoneCount } = await loadStoreReadiness(params.data.storeId);
+
+  res.json(await Promise.all(
+    pages.map(p => withReadiness(formatLandingPage(p as unknown as Record<string, unknown>, countMap[p.id] ?? 0), p, store, usableZoneCount)),
+  ));
 });
 
 landingPagesRouter.post("/", async (req: AppRequest, res: AppResponse): Promise<void> => {
@@ -121,7 +149,9 @@ landingPagesRouter.get("/:pageId", async (req: AppRequest, res: AppResponse): Pr
     .from(ordersTable)
     .where(eq(ordersTable.landingPageId, page.id));
 
-  res.json(formatLandingPage(page as unknown as Record<string, unknown>, count ?? 0));
+  const { store, usableZoneCount } = await loadStoreReadiness(page.storeId);
+
+  res.json(await withReadiness(formatLandingPage(page as unknown as Record<string, unknown>, count ?? 0), page, store, usableZoneCount));
 });
 
 landingPagesRouter.patch("/:pageId", async (req: AppRequest, res: AppResponse): Promise<void> => {

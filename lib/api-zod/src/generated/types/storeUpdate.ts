@@ -13,5 +13,4 @@ export interface StoreUpdate {
   city?: string;
   /** @nullable */
   logoUrl?: string | null;
-  isActive?: boolean;
 }

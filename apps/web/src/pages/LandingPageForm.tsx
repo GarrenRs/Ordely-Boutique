@@ -6,7 +6,9 @@ import { z } from "zod";
 import {
   useGetLandingPage,
   getGetLandingPageQueryKey,
+  getGetStoreQueryKey,
   useCreateLandingPage,
+  useGetStore,
   useUpdateLandingPage,
   getListLandingPagesQueryKey,
   useUploadProductImage,
@@ -221,6 +223,10 @@ export default function LandingPageForm() {
   const [secondaryOptionValues, setSecondaryOptionValues] = useState<string[]>([]);
   const [galleryDisplay, setGalleryDisplay] = useState<GalleryDisplay>("carousel");
   const [themeColor, setThemeColor] = useState(THEME_OPTIONS[0].value);
+
+  const { data: store } = useGetStore(STORE_ID, {
+    query: { queryKey: getGetStoreQueryKey(STORE_ID) },
+  });
 
   const { data: existing } = useGetLandingPage(STORE_ID, Number(pageId), {
     query: { enabled: isEditing, queryKey: getGetLandingPageQueryKey(STORE_ID, Number(pageId)) },
@@ -533,6 +539,12 @@ export default function LandingPageForm() {
         <Field label="رقم واتساب" error={form.formState.errors.whatsappNumber?.message}>
           <input data-testid="input-whatsapp" {...form.register("whatsappNumber")} className={inputCls} dir="ltr" />
         </Field>
+
+        {store && store.deliveryReady === false && (
+          <div className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400 leading-5">
+            لن يظهر المنتج للعملاء حتى تفعّل المتجر وتضيف ولاية توصيل واحدة على الأقل بأسعار توصيل عبر صفحة التوصيل.
+          </div>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button

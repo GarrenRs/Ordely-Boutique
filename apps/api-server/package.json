@@ -7,6 +7,9 @@
     "dev": "npm run build && npm run start",
     "build": "node ./build.mjs",
     "start": "node --env-file-if-exists=../../.env --enable-source-maps ./dist/index.mjs",
+    "test:readiness": "node ./test-readiness.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/tests/readiness.test.mjs",
+    "test:lifecycle": "node ./test-lifecycle.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/tests/lifecycle.test.mjs",
+    "test:return": "node ./test-return.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/tests/return.test.mjs",
     "typecheck": "tsc --build tsconfig.json --force"
   },
   "dependencies": {

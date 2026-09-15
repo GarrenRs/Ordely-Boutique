@@ -30,6 +30,18 @@ type StoreWithSubscription = {
   subscriptionExpiresAt?: string | null;
   subscriptionPlanDays?: number | null;
   isActive?: boolean;
+  storeStatus?: "ACTIVE" | "EXPIRING_SOON" | "EXPIRED" | "SUSPENDED";
+  daysLeft?: number | null;
+};
+
+type MerchantSubscriptionInfo = {
+  label: string;
+  detail: string;
+  expiresAtLabel: string;
+  planLabel: string;
+  tone: string;
+  daysLeft: number | null;
+  status: "ACTIVE" | "EXPIRING_SOON" | "EXPIRED" | "SUSPENDED";
 };
 
 const SUBSCRIPTION_WHATSAPP_URL = "https://wa.me/213549990984";
@@ -127,7 +139,7 @@ function subscriptionPlanLabel(days?: number | null) {
   return "الخطة غير محددة";
 }
 
-function merchantSubscriptionInfo(store?: StoreWithSubscription | null) {
+function merchantSubscriptionInfo(store?: StoreWithSubscription | null): MerchantSubscriptionInfo {
   if (!store?.subscriptionExpiresAt) {
     return {
       label: "مدة التشغيل غير محددة",
@@ -136,6 +148,7 @@ function merchantSubscriptionInfo(store?: StoreWithSubscription | null) {
       planLabel: subscriptionPlanLabel(store?.subscriptionPlanDays),
       tone: "bg-sidebar-accent text-sidebar-foreground/80 border-sidebar-border",
       daysLeft: null as number | null,
+      status: store?.isActive === false ? "SUSPENDED" : "ACTIVE",
     };
   }
 
@@ -145,19 +158,34 @@ function merchantSubscriptionInfo(store?: StoreWithSubscription | null) {
     month: "long",
     day: "numeric",
   });
-  const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
-  if (daysLeft <= 0) {
+  const daysLeft = store.daysLeft ?? Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
+  const serverStatus = store.storeStatus;
+
+  if (serverStatus === "SUSPENDED") {
     return {
-      label: "انتهى تشغيل المتجر العام",
+      label: "المتجر موقوف مؤقتاً",
+      detail: "تواصل معنا لإعادة التفعيل",
+      expiresAtLabel,
+      planLabel: subscriptionPlanLabel(store.subscriptionPlanDays),
+      tone: "bg-slate-500/15 text-slate-200 border-slate-400/30",
+      daysLeft,
+      status: "SUSPENDED",
+    };
+  }
+
+  if (serverStatus === "EXPIRED" || (serverStatus === undefined && daysLeft <= 0)) {
+    return {
+      label: "انتهى اشتراك المتجر",
       detail: `انتهى في ${expiresAtLabel}`,
       expiresAtLabel,
       planLabel: subscriptionPlanLabel(store.subscriptionPlanDays),
       tone: "bg-rose-500/12 text-rose-200 border-rose-400/30",
       daysLeft,
+      status: "EXPIRED",
     };
   }
 
-  if (daysLeft <= 7) {
+  if (serverStatus === "EXPIRING_SOON" || (serverStatus === undefined && daysLeft <= 7)) {
     return {
       label: `متبقي ${daysLeft} يوم`,
       detail: `ينتهي في ${expiresAtLabel}`,
@@ -165,6 +193,7 @@ function merchantSubscriptionInfo(store?: StoreWithSubscription | null) {
       planLabel: subscriptionPlanLabel(store.subscriptionPlanDays),
       tone: "bg-amber-500/15 text-amber-100 border-amber-400/40",
       daysLeft,
+      status: "EXPIRING_SOON",
     };
   }
 
@@ -175,11 +204,70 @@ function merchantSubscriptionInfo(store?: StoreWithSubscription | null) {
     planLabel: subscriptionPlanLabel(store.subscriptionPlanDays),
     tone: "bg-emerald-500/12 text-emerald-100 border-emerald-400/30",
     daysLeft,
+    status: "ACTIVE",
   };
 }
 
 function formatPlanPrice(value: number) {
   return `${value.toLocaleString("ar-DZ-u-nu-latn")} دج`;
+}
+
+type SubscriptionBannerProps = {
+  subscription: MerchantSubscriptionInfo;
+  onRenew: () => void;
+};
+
+function SubscriptionBanner({ subscription, onRenew }: SubscriptionBannerProps) {
+  if (subscription.status === "EXPIRED") {
+    return (
+      <div className="flex flex-col gap-3 border-b border-rose-300/30 bg-rose-600/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6" data-testid="subscription-expired-banner">
+        <div className="flex items-start gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-rose-600/20 text-rose-600 dark:text-rose-300">
+            <CalendarClock className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-foreground">انتهى اشتراك المتجر</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              انتهت مدة الاشتراك في {subscription.expiresAtLabel}، المتجر العام متوقف ولا يقبل طلبات جديدة. يمكنك متابعة إدارة الطلبات الحالية والعملاء والمنتجات.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onRenew}
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-rose-600 px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-rose-700"
+        >
+          <CalendarClock className="h-3.5 w-3.5" />
+          تجديد الاشتراك
+        </button>
+      </div>
+    );
+  }
+
+  if (subscription.status === "EXPIRING_SOON") {
+    return (
+      <div className="flex flex-col gap-3 border-b border-amber-300/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6" data-testid="subscription-expiring-banner">
+        <div className="flex items-center gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-300">
+            <CalendarClock className="h-4.5 w-4.5" />
+          </div>
+          <p className="text-sm font-semibold text-foreground">
+            تبقي {subscription.daysLeft} يوم على انتهاء الاشتراك — جدّد الآن لتجنب توقف المتجر.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRenew}
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-amber-600 px-4 text-xs font-bold text-white shadow-sm transition-colors hover:bg-amber-700"
+        >
+          <CalendarClock className="h-3.5 w-3.5" />
+          تجديد الاشتراك
+        </button>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -419,6 +507,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="dashboard-main flex-1 overflow-y-auto">
+        <SubscriptionBanner subscription={subscription} onRenew={() => setSubscriptionOpen(true)} />
         {children}
       </main>
 

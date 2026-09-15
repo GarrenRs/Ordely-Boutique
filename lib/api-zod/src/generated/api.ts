@@ -186,6 +186,9 @@ export const ListProviderStoresResponseItem = zod.object({
   city: zod.string(),
   logoUrl: zod.string().nullish(),
   isActive: zod.boolean(),
+  subscriptionPlanDays: zod.number().nullish(),
+  subscriptionExpiresAt: zod.string().nullish(),
+  subscriptionStatus: zod.enum(["active", "expiringSoon", "expired", "suspended", "noSubscription"]).optional(),
   merchantEmail: zod.string().nullish(),
   ordersCount: zod.number(),
   createdAt: zod.string(),
@@ -231,6 +234,9 @@ export const UpdateProviderStoreResponse = zod.object({
   city: zod.string(),
   logoUrl: zod.string().nullish(),
   isActive: zod.boolean(),
+  subscriptionPlanDays: zod.number().nullish(),
+  subscriptionExpiresAt: zod.string().nullish(),
+  subscriptionStatus: zod.enum(["active", "expiringSoon", "expired", "suspended", "noSubscription"]).optional(),
   merchantEmail: zod.string().nullish(),
   ordersCount: zod.number(),
   createdAt: zod.string(),
@@ -284,6 +290,11 @@ export const GetStoreResponse = zod.object({
   city: zod.string(),
   logoUrl: zod.string().nullish(),
   isActive: zod.boolean(),
+  deliveryReady: zod.boolean().optional(),
+  storeStatus: zod.enum(["ACTIVE", "EXPIRING_SOON", "EXPIRED", "SUSPENDED"]).optional(),
+  daysLeft: zod.number().nullish(),
+  subscriptionPlanDays: zod.number().nullish(),
+  subscriptionExpiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -300,7 +311,6 @@ export const UpdateStoreBody = zod.object({
   phone: zod.string().optional(),
   city: zod.string().optional(),
   logoUrl: zod.string().nullish(),
-  isActive: zod.boolean().optional(),
 });
 
 export const UpdateStoreResponse = zod.object({
@@ -312,6 +322,11 @@ export const UpdateStoreResponse = zod.object({
   city: zod.string(),
   logoUrl: zod.string().nullish(),
   isActive: zod.boolean(),
+  deliveryReady: zod.boolean().optional(),
+  storeStatus: zod.enum(["ACTIVE", "EXPIRING_SOON", "EXPIRED", "SUSPENDED"]).optional(),
+  daysLeft: zod.number().nullish(),
+  subscriptionPlanDays: zod.number().nullish(),
+  subscriptionExpiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -342,6 +357,8 @@ export const ListLandingPagesResponseItem = zod.object({
   whatsappNumber: zod.string().nullish(),
   isActive: zod.boolean(),
   ordersCount: zod.number().optional(),
+  publiclyLive: zod.boolean().optional(),
+  readinessReason: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListLandingPagesResponse = zod.array(ListLandingPagesResponseItem);
@@ -399,6 +416,8 @@ export const GetLandingPageResponse = zod.object({
   whatsappNumber: zod.string().nullish(),
   isActive: zod.boolean(),
   ordersCount: zod.number().optional(),
+  publiclyLive: zod.boolean().optional(),
+  readinessReason: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -785,6 +804,7 @@ export const GetOrderResponse = zod.object({
   shippedAt: zod.string().nullish(),
   deliveredAt: zod.string().nullish(),
   returnedAt: zod.string().nullish(),
+  returnReason: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -810,6 +830,7 @@ export const UpdateOrderBody = zod.object({
     ])
     .optional(),
   notes: zod.string().nullish(),
+  returnReason: zod.string().nullish(),
   customerPhone: zod.string().optional(),
   customerCity: zod.string().optional(),
   customerAddress: zod.string().nullish(),
@@ -858,6 +879,7 @@ export const UpdateOrderResponse = zod.object({
   shippedAt: zod.string().nullish(),
   deliveredAt: zod.string().nullish(),
   returnedAt: zod.string().nullish(),
+  returnReason: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -1045,6 +1067,7 @@ export const ListConfirmationsResponseItem = zod.object({
   shippedAt: zod.string().nullish(),
   deliveredAt: zod.string().nullish(),
   returnedAt: zod.string().nullish(),
+  returnReason: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListConfirmationsResponse = zod.array(
@@ -1106,6 +1129,7 @@ export const ConfirmOrderResponse = zod.object({
   shippedAt: zod.string().nullish(),
   deliveredAt: zod.string().nullish(),
   returnedAt: zod.string().nullish(),
+  returnReason: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -1164,6 +1188,7 @@ export const RejectOrderResponse = zod.object({
   shippedAt: zod.string().nullish(),
   deliveredAt: zod.string().nullish(),
   returnedAt: zod.string().nullish(),
+  returnReason: zod.string().nullish(),
   createdAt: zod.string(),
 });
 

@@ -165,6 +165,11 @@ export interface ProviderStore {
   logoUrl?: string | null;
   isActive: boolean;
   /** @nullable */
+  subscriptionPlanDays?: number | null;
+  /** @nullable */
+  subscriptionExpiresAt?: string | null;
+  subscriptionStatus?: "active" | "expiringSoon" | "expired" | "suspended" | "noSubscription";
+  /** @nullable */
   merchantEmail?: string | null;
   ordersCount: number;
   createdAt: string;
@@ -212,6 +217,14 @@ export interface Store {
   /** @nullable */
   logoUrl?: string | null;
   isActive: boolean;
+  deliveryReady?: boolean;
+  storeStatus?: "ACTIVE" | "EXPIRING_SOON" | "EXPIRED" | "SUSPENDED";
+  /** @nullable */
+  daysLeft?: number | null;
+  /** @nullable */
+  subscriptionPlanDays?: number | null;
+  /** @nullable */
+  subscriptionExpiresAt?: string | null;
   createdAt: string;
 }
 
@@ -231,7 +244,6 @@ export interface StoreUpdate {
   city?: string;
   /** @nullable */
   logoUrl?: string | null;
-  isActive?: boolean;
 }
 
 export interface ProductCategory {
@@ -297,6 +309,9 @@ export interface LandingPage {
   whatsappNumber?: string | null;
   isActive: boolean;
   ordersCount?: number;
+  publiclyLive?: boolean;
+  /** @nullable */
+  readinessReason?: string | null;
   createdAt: string;
 }
 
@@ -491,6 +506,8 @@ export interface Order {
   deliveredAt?: string | null;
   /** @nullable */
   returnedAt?: string | null;
+  /** @nullable */
+  returnReason?: string | null;
   createdAt: string;
 }
 
@@ -513,6 +530,8 @@ export interface OrderUpdate {
   status?: OrderStatus;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  returnReason?: string | null;
   customerPhone?: string;
   customerCity?: string;
   /** @nullable */

@@ -31,6 +31,14 @@ const TRANSPORT_LABELS: Record<string, string> = {
   SHED_MED: "تسليم واستلام يدوي",
 };
 
+const READINESS_LABELS: Record<string, string> = {
+  store_inactive: "المتجر غير مفعّل",
+  subscription_expired: "اشتراك المتجر منتهي",
+  no_usable_delivery_zone: "أضف ولاية توصيل واحدة على الأقل بأسعار توصيل",
+  product_unpublished: "المنتج مخفي يدوياً",
+  product_incomplete: "بيانات المنتج غير مكتملة",
+};
+
 type PendingDelete =
   | { type: "category"; id: number; title: string; description: string }
   | { type: "page"; id: number; title: string; description: string }
@@ -385,15 +393,20 @@ export default function LandingPagesList() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${page.isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
+                      <span className={`inline-block w-1.5 h-1.5 rounded-full ${page.publiclyLive ? "bg-emerald-500" : "bg-gray-400"}`} />
                       <span className="text-xs text-muted-foreground">
-                        {page.isActive ? "نشطة" : "متوقفة"} · {TEMPLATE_LABELS[page.template] ?? page.template}
+                        {page.publiclyLive ? "منشور" : "غير منشور"} · {TEMPLATE_LABELS[page.template] ?? page.template}
                       </span>
                     </div>
                     <p className="font-semibold text-foreground truncate">{page.productName}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {categoryMap.get(page.categoryId ?? 0) ?? "عام"} · {TRANSPORT_LABELS[page.transportMode ?? "DELIVERY_COMPANY"]}
                     </p>
+                    {page.readinessReason && (
+                      <p className="mt-1 inline-flex max-w-full items-center gap-1 rounded border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                        {READINESS_LABELS[page.readinessReason] ?? page.readinessReason}
+                      </p>
+                    )}
                     <p className="text-lg font-bold text-primary tabular-nums mt-0.5">{formatCurrency(page.price)}</p>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import { db, eq, storesTable, usersTable } from "@workspace/db";
 import { loginLimiter } from "../middleware/rateLimiter.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { hashMerchantPassword } from "../lib/password.js";
+import { computeStoreLifecycle } from "../lib/storeLifecycle.js";
 
 export const authRouter = Router();
 
@@ -33,6 +34,11 @@ authRouter.post("/login", loginLimiter, async (req: AppRequest, res: AppResponse
     return;
   }
 
+  if (!store.isActive) {
+    res.status(403).json({ error: "المتجر موقوف مؤقتاً. تواصل معنا." });
+    return;
+  }
+
   req.session.userId = user.id;
   req.session.storeId = user.storeId;
   req.session.email = user.email;
@@ -55,12 +61,14 @@ authRouter.post("/logout", (req: AppRequest, res: AppResponse): void => {
   });
 });
 
-authRouter.get("/me", (req: AppRequest, res: AppResponse): void => {
+authRouter.get("/me", async (req: AppRequest, res: AppResponse): Promise<void> => {
   res.set("Cache-Control", "no-store");
   if (!req.session?.userId) {
     res.json({ user: null });
     return;
   }
+  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, req.session.storeId!));
+  const lifecycle = store ? computeStoreLifecycle(store) : null;
   res.json({
     user: {
       id: req.session.userId,
@@ -68,6 +76,14 @@ authRouter.get("/me", (req: AppRequest, res: AppResponse): void => {
       storeId: req.session.storeId,
       storeName: req.session.storeName,
     },
+    store: lifecycle
+      ? {
+          storeStatus: lifecycle.status,
+          isActive: lifecycle.isActive,
+          subscriptionExpiresAt: lifecycle.subscriptionExpiresAt,
+          daysLeft: lifecycle.daysLeft,
+        }
+      : null,
   });
 });
 

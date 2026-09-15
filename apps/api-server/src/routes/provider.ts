@@ -19,6 +19,7 @@ import { requireProviderAuth } from "../middleware/requireAuth.js";
 import { loginLimiter } from "../middleware/rateLimiter.js";
 import { hashMerchantPassword } from "../lib/password.js";
 import { reseedShowcaseStore } from "../lib/showcaseSeed.js";
+import { computeStoreLifecycle, computeRenewalExpiry, providerSubscriptionStatus } from "../lib/storeLifecycle.js";
 import { z } from "zod";
 
 export const providerRouter = Router();
@@ -120,6 +121,7 @@ function formatStore(row: {
   merchantEmail: string | null;
   ordersCount: number;
 }) {
+  const lifecycle = computeStoreLifecycle(row.store);
   return {
     id: row.store.id,
     name: row.store.name,
@@ -131,6 +133,7 @@ function formatStore(row: {
     isActive: row.store.isActive,
     subscriptionPlanDays: row.store.subscriptionPlanDays,
     subscriptionExpiresAt: row.store.subscriptionExpiresAt,
+    subscriptionStatus: providerSubscriptionStatus(lifecycle),
     merchantEmail: row.merchantEmail,
     ordersCount: Number(row.ordersCount ?? 0),
     createdAt: row.store.createdAt,
@@ -438,6 +441,12 @@ providerRouter.patch("/stores/:storeId", requireProviderAuth, async (req: AppReq
     return;
   }
 
+  const [existingStore] = await db.select().from(storesTable).where(eq(storesTable.id, storeId));
+  if (!existingStore) {
+    res.status(404).json({ error: "المتجر غير موجود" });
+    return;
+  }
+
   const updateData: Record<string, unknown> = {};
   for (const key of ["name", "ownerName", "phone", "city", "isActive"] as const) {
     if (key in req.body) updateData[key] = req.body[key];
@@ -449,7 +458,7 @@ providerRouter.patch("/stores/:storeId", requireProviderAuth, async (req: AppReq
       return;
     }
     updateData.subscriptionPlanDays = subscriptionDays;
-    updateData.subscriptionExpiresAt = addSubscriptionDays(subscriptionDays);
+    updateData.subscriptionExpiresAt = computeRenewalExpiry(existingStore, subscriptionDays);
     updateData.isActive = true;
   }
   if (Object.keys(updateData).length === 0) {

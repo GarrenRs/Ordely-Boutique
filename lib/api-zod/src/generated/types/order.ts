@@ -56,5 +56,7 @@ export interface Order {
   deliveredAt?: string | null;
   /** @nullable */
   returnedAt?: string | null;
+  /** @nullable */
+  returnReason?: string | null;
   createdAt: string;
 }

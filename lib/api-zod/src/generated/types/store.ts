@@ -16,5 +16,13 @@ export interface Store {
   /** @nullable */
   logoUrl?: string | null;
   isActive: boolean;
+  deliveryReady?: boolean;
+  storeStatus?: "ACTIVE" | "EXPIRING_SOON" | "EXPIRED" | "SUSPENDED";
+  /** @nullable */
+  daysLeft?: number | null;
+  /** @nullable */
+  subscriptionPlanDays?: number | null;
+  /** @nullable */
+  subscriptionExpiresAt?: string | null;
   createdAt: string;
 }

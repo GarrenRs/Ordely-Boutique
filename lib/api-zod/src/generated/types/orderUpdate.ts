@@ -11,6 +11,8 @@ export interface OrderUpdate {
   status?: OrderStatus;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  returnReason?: string | null;
   customerPhone?: string;
   customerCity?: string;
   /** @nullable */

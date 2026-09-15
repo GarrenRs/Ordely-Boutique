@@ -1249,6 +1249,13 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+        subscriptionPlanDays:
+          type: ["integer", "null"]
+        subscriptionExpiresAt:
+          type: ["string", "null"]
+        subscriptionStatus:
+          type: string
+          enum: [active, expiringSoon, expired, suspended, noSubscription]
         merchantEmail:
           type: ["string", "null"]
         ordersCount:
@@ -1334,6 +1341,17 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+        deliveryReady:
+          type: boolean
+        storeStatus:
+          type: string
+          enum: [ACTIVE, EXPIRING_SOON, EXPIRED, SUSPENDED]
+        daysLeft:
+          type: ["integer", "null"]
+        subscriptionPlanDays:
+          type: ["integer", "null"]
+        subscriptionExpiresAt:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -1367,8 +1385,6 @@ components:
           type: string
         logoUrl:
           type: ["string", "null"]
-        isActive:
-          type: boolean
 
     # ─── Landing Page ─────────────────────────────────────────────────────────
     ProductCategory:
@@ -1459,6 +1475,10 @@ components:
           type: boolean
         ordersCount:
           type: integer
+        publiclyLive:
+          type: boolean
+        readinessReason:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -1707,6 +1727,8 @@ components:
           type: ["string", "null"]
         returnedAt:
           type: ["string", "null"]
+        returnReason:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -1745,6 +1767,8 @@ components:
         status:
           $ref: "#/components/schemas/OrderStatus"
         notes:
+          type: ["string", "null"]
+        returnReason:
           type: ["string", "null"]
         customerPhone:
           type: string
