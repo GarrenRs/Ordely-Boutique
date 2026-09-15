@@ -130,6 +130,20 @@ export interface PublicOrderResult {
   status: string;
 }
 
+export interface OrderTrackingRequest {
+  orderId: number;
+  phone: string;
+}
+
+export interface OrderTracking {
+  orderId: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  returnedAt?: string | null;
+  deliveredAt?: string | null;
+}
+
 export interface ProviderUser {
   id: number;
   email: string;

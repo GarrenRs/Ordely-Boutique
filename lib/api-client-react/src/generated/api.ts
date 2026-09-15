@@ -56,6 +56,8 @@ import type {
   RejectionInput,
   Store,
   StoreUpdate,
+  OrderTracking,
+  OrderTrackingRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -445,6 +447,92 @@ export const useCreatePublicOrderByStore = <
   TContext
 > => {
   return useMutation(getCreatePublicOrderByStoreMutationOptions(options));
+};
+
+/**
+ * @summary Track an order status by order id and customer phone (no auth)
+ */
+export const getTrackOrderStatusUrl = () => {
+  return `/api/public/orders/status`;
+};
+
+export const trackOrderStatus = async (
+  orderTrackingRequest: OrderTrackingRequest,
+  options?: RequestInit,
+): Promise<OrderTracking> => {
+  return customFetch<OrderTracking>(getTrackOrderStatusUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(orderTrackingRequest),
+  });
+};
+
+export const getTrackOrderStatusMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof trackOrderStatus>>,
+    TError,
+    { data: BodyType<OrderTrackingRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof trackOrderStatus>>,
+  TError,
+  { data: BodyType<OrderTrackingRequest> },
+  TContext
+> => {
+  const mutationKey = ["trackOrderStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof trackOrderStatus>>,
+    { data: BodyType<OrderTrackingRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return trackOrderStatus(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TrackOrderStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof trackOrderStatus>>
+>;
+export type TrackOrderStatusMutationBody = BodyType<OrderTrackingRequest>;
+export type TrackOrderStatusMutationError = ErrorType<void>;
+
+/**
+ * @summary Track an order status by order id and customer phone (no auth)
+ */
+export const useTrackOrderStatus = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof trackOrderStatus>>,
+    TError,
+    { data: BodyType<OrderTrackingRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof trackOrderStatus>>,
+  TError,
+  { data: BodyType<OrderTrackingRequest> },
+  TContext
+> => {
+  return useMutation(getTrackOrderStatusMutationOptions(options));
 };
 
 /**

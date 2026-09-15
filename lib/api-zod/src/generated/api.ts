@@ -126,6 +126,32 @@ export const CreatePublicOrderByStoreBody = zod.object({
 });
 
 /**
+ * @summary Track an order status by order id and customer phone
+ */
+export const TrackOrderStatusBody = zod.object({
+  orderId: zod.number().int().positive(),
+  phone: zod.string(),
+});
+
+export const TrackOrderStatusResponse = zod.object({
+  orderId: zod.number(),
+  status: zod.enum([
+    "NEW",
+    "PENDING_CONFIRMATION",
+    "CONFIRMED",
+    "SHIPPED",
+    "DELIVERED",
+    "RETURNED",
+    "CANCELLED",
+    "REJECTED",
+  ]),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  returnedAt: zod.string().nullish(),
+  deliveredAt: zod.string().nullish(),
+});
+
+/**
  * @summary Provider login
  */
 export const ProviderLoginBody = zod.object({

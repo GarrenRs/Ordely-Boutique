@@ -17,3 +17,12 @@ export const loginLimiter = rateLimit({
   message: { error: "محاولات كثيرة، حاول بعد 15 دقيقة" },
   validate: { xForwardedForHeader: false },
 });
+
+export const trackOrderLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "طلبات كثيرة، حاول لاحقاً" },
+  validate: { xForwardedForHeader: false },
+});

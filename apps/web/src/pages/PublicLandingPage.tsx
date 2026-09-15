@@ -441,6 +441,16 @@ export default function PublicLandingPage() {
             رقم الطلب #{submittedOrderId}
           </p>
         )}
+        {submittedOrderId && (
+          <Link
+            href={`/track?orderId=${submittedOrderId}`}
+            data-testid="link-track-order"
+            className="mt-3 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/12 bg-white/8 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:border-primary/60 hover:bg-white/12 hover:text-primary"
+          >
+            <Package className="w-4 h-4" />
+            تتبع طلبك
+          </Link>
+        )}
         <div className="mt-6 flex w-full max-w-xs flex-col items-center gap-2">
           {page.whatsappNumber && (
             <a

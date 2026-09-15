@@ -125,6 +125,31 @@ paths:
         "422":
           description: Invalid product variant or delivery selection
 
+  /public/orders/status:
+    post:
+      operationId: trackOrderStatus
+      tags: [public]
+      summary: Track an order status by order id and customer phone (no auth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderTrackingRequest"
+      responses:
+        "200":
+          description: Order tracking status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderTracking"
+        "400":
+          description: Malformed request body
+        "404":
+          description: Order not found or phone mismatch (uniform, non-enumerable)
+        "429":
+          description: Too many requests (20 per 10 minutes per IP)
+
   /provider/auth/login:
     post:
       operationId: providerLogin
@@ -1183,6 +1208,39 @@ components:
           type: number
         status:
           type: string
+
+    OrderTrackingRequest:
+      type: object
+      required: [orderId, phone]
+      properties:
+        orderId:
+          type: integer
+          format: int64
+          minimum: 1
+        phone:
+          type: string
+
+    OrderTracking:
+      type: object
+      required: [orderId, status, createdAt, updatedAt]
+      properties:
+        orderId:
+          type: integer
+        status:
+          type: string
+          enum: [NEW, PENDING_CONFIRMATION, CONFIRMED, SHIPPED, DELIVERED, RETURNED, CANCELLED, REJECTED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        returnedAt:
+          type: ["string", "null"]
+          format: date-time
+        deliveredAt:
+          type: ["string", "null"]
+          format: date-time
 
     ProviderUser:
       type: object

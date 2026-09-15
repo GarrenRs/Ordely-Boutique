@@ -61,6 +61,8 @@ export * from "./publicStoreCategory.js";
 export * from "./publicStoreInfo.js";
 export * from "./publicStorePage.js";
 export * from "./publicStoreProduct.js";
+export * from "./orderTracking.js";
+export * from "./orderTrackingRequest.js";
 export * from "./rejectionInput.js";
 export * from "./store.js";
 export * from "./storeInput.js";

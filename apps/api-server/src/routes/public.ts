@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { AppRequest, AppResponse } from "../types/http.js";
 import { and, customersTable, db, deliveryCommuneSettingsTable, deliveryZonesTable, eq, landingPagesTable, ordersTable, productCategoriesTable, storesTable } from "@workspace/db";
 import { z } from "zod";
-import { publicOrderLimiter } from "../middleware/rateLimiter.js";
+import { publicOrderLimiter, trackOrderLimiter } from "../middleware/rateLimiter.js";
 import { logAudit } from "../lib/audit.js";
 import { findCommuneInWilaya, findWilayaByCode } from "../lib/algeria-locations.js";
 import {
@@ -29,6 +29,11 @@ const PublicOrderSchema = z.object({
 });
 
 type LandingPageRow = typeof landingPagesTable.$inferSelect;
+
+const TrackOrderStatusSchema = z.object({
+  orderId: z.number().int().positive(),
+  phone: z.string().trim().min(1).max(50),
+});
 
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
@@ -415,4 +420,43 @@ publicRouter.post("/p/:slug/order", publicOrderLimiter, async (req: AppRequest, 
   }
   const result = await createPublicOrder(pages[0], req.body);
   res.status(result.status).json(result.body);
+});
+
+publicRouter.post("/orders/status", trackOrderLimiter, async (req: AppRequest, res: AppResponse): Promise<void> => {
+  const parsed = TrackOrderStatusSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "بيانات غير صحيحة", details: parsed.error.issues });
+    return;
+  }
+
+  const [order] = await db
+    .select({
+      id: ordersTable.id,
+      status: ordersTable.status,
+      createdAt: ordersTable.createdAt,
+      updatedAt: ordersTable.updatedAt,
+      returnedAt: ordersTable.returnedAt,
+      deliveredAt: ordersTable.deliveredAt,
+    })
+    .from(ordersTable)
+    .where(and(
+      eq(ordersTable.id, parsed.data.orderId),
+      eq(ordersTable.customerPhone, parsed.data.phone),
+    ))
+    .limit(1);
+
+  if (!order) {
+    res.status(404).json({ error: "الطلب غير موجود" });
+    return;
+  }
+
+  res.set("Cache-Control", "no-store");
+  res.json({
+    orderId: order.id,
+    status: order.status,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    returnedAt: order.returnedAt,
+    deliveredAt: order.deliveredAt,
+  });
 });

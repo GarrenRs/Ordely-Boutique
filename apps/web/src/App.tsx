@@ -19,6 +19,7 @@ import DeliverySystem from "@/pages/DeliverySystem";
 import Login from "@/pages/Login";
 import PublicLandingPage from "@/pages/PublicLandingPage";
 import PublicStorePage from "@/pages/PublicStorePage";
+import TrackOrder from "@/pages/TrackOrder";
 import ProviderLogin from "@/pages/provider/ProviderLogin";
 import ProviderDashboard from "@/pages/provider/ProviderDashboard";
 import ProviderStores from "@/pages/provider/ProviderStores";
@@ -163,6 +164,7 @@ function Router() {
       <Route path="/s/:storeSlug/p/:productSlug" component={PublicLandingPage} />
       <Route path="/s/:storeSlug" component={PublicStorePage} />
       <Route path="/p/:slug" component={PublicLandingPage} />
+      <Route path="/track" component={TrackOrder} />
       <Route component={MerchantRouter} />
     </Switch>
   );
