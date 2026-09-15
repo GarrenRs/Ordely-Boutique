@@ -11,6 +11,13 @@ out-tsc
 # dependencies
 node_modules
 
+# logs and local runtime files
+*.log
+*.out
+uploads/
+/backend/.env
+tmp/
+
 # IDEs and editors
 /.idea
 .project
