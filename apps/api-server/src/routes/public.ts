@@ -1,10 +1,11 @@
 import { Router } from "express";
 import type { AppRequest, AppResponse } from "../types/http.js";
-import { and, customersTable, db, deliveryCommuneSettingsTable, deliveryZonesTable, eq, landingPagesTable, ordersTable, productCategoriesTable, storesTable } from "@workspace/db";
+import { and, db, deliveryZonesTable, eq, landingPagesTable, ordersTable, productCategoriesTable, storesTable } from "@workspace/db";
 import { z } from "zod";
 import { publicOrderLimiter, trackOrderLimiter } from "../middleware/rateLimiter.js";
-import { logAudit } from "../lib/audit.js";
-import { findCommuneInWilaya, findWilayaByCode } from "../lib/algeria-locations.js";
+import { createOrderCore } from "../lib/order-creation.js";
+import { asStringArray } from "../lib/order-format.js";
+import { findWilayaByCode } from "../lib/algeria-locations.js";
 import {
   effectiveActiveStoreSql,
   productDataComplete,
@@ -35,27 +36,8 @@ const TrackOrderStatusSchema = z.object({
   phone: z.string().trim().min(1).max(50),
 });
 
-function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
 function firstParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
-}
-
-function firstProductImage(page: { productImages?: unknown; imageUrl?: string | null }): string | null {
-  return asStringArray(page.productImages)[0] ?? page.imageUrl ?? null;
-}
-
-function validateVariantSelection(
-  options: string[],
-  selected: string | null | undefined,
-  label: string,
-): string | null {
-  if (!options.length) return null;
-  if (!selected) return `${label} is required for this product`;
-  if (!options.includes(selected)) return `${label} is not available for this product`;
-  return null;
 }
 
 async function findActiveStore(storeSlug: string) {
@@ -182,128 +164,23 @@ async function createPublicOrder(page: LandingPageRow, reqBody: unknown) {
     return { status: 400, body: { error: "بيانات غير صحيحة", details: parsed.error.issues } } as const;
   }
 
-  if (!(await storeHasUsableDeliveryZone(page.storeId))) {
-    return { status: 422, body: { error: "الولاية غير متاحة للتوصيل حاليا" } } as const;
-  }
-
-  const { customerName, customerPhone, customerAddress, deliveryZoneId, deliveryCommuneName, deliveryMethod, selectedSize, selectedColor, quantity, notes } = parsed.data;
-  const transportMode = page.transportMode ?? "DELIVERY_COMPANY";
-  const effectiveDeliveryMethod = transportMode === "SHED_MED" ? "OFFICE" : deliveryMethod;
-  const sizeError = validateVariantSelection(asStringArray(page.availableSizes), selectedSize, "selectedSize");
-  const colorError = validateVariantSelection(asStringArray(page.availableColors), selectedColor, "selectedColor");
-  if (sizeError || colorError) {
-    return { status: 422, body: { error: sizeError ?? colorError } } as const;
-  }
-
-  const [deliveryZone] = await db
-    .select()
-    .from(deliveryZonesTable)
-    .where(and(
-      eq(deliveryZonesTable.id, deliveryZoneId),
-      eq(deliveryZonesTable.storeId, page.storeId),
-      eq(deliveryZonesTable.isActive, true),
-    ));
-
-  if (!deliveryZone) {
-    return { status: 422, body: { error: "الولاية غير متاحة للتوصيل حاليا" } } as const;
-  }
-
-  if (deliveryZone.officeFee === null || (effectiveDeliveryMethod === "HOME" && deliveryZone.homeFee === null)) {
-    return { status: 422, body: { error: "طريقة التوصيل غير متاحة لهذه الولاية" } } as const;
-  }
-
-  const sourceWilaya = findWilayaByCode(deliveryZone.wilayaCode);
-  const commune = findCommuneInWilaya(deliveryZone.wilayaCode, deliveryCommuneName);
-  if (!sourceWilaya || !commune) {
-    return { status: 422, body: { error: "البلدية لا تتبع الولاية المختارة" } } as const;
-  }
-
-  const [communeSetting] = await db
-    .select()
-    .from(deliveryCommuneSettingsTable)
-    .where(and(
-      eq(deliveryCommuneSettingsTable.storeId, page.storeId),
-      eq(deliveryCommuneSettingsTable.wilayaCode, deliveryZone.wilayaCode),
-      eq(deliveryCommuneSettingsTable.communeName, commune.name),
-    ));
-  if (communeSetting && !communeSetting.isActive) {
-    return { status: 422, body: { error: "البلدية غير متاحة للتوصيل حاليا" } } as const;
-  }
-
-  const unitPrice = Number(page.price);
-  const productTotal = unitPrice * quantity;
-  const baseDeliveryFee = Number(deliveryZone.officeFee);
-  const deliveryFee = effectiveDeliveryMethod === "HOME"
-    ? baseDeliveryFee + Number(deliveryZone.homeFee)
-    : baseDeliveryFee;
-  const returnFee = Number(deliveryZone.returnFee);
-  const productImageUrl = firstProductImage(page);
-  const customerCity = sourceWilaya.name;
-
-  let customerId: number | null = null;
-  const [existing] = await db
-    .select()
-    .from(customersTable)
-    .where(and(eq(customersTable.storeId, page.storeId), eq(customersTable.phone, customerPhone)));
-
-  if (existing) {
-    customerId = existing.id;
-    await db.update(customersTable)
-      .set({ name: customerName, city: customerCity })
-      .where(and(eq(customersTable.id, existing.id), eq(customersTable.storeId, page.storeId)));
-  } else {
-    const [newCust] = await db.insert(customersTable).values({
-      storeId: page.storeId,
-      name: customerName,
-      phone: customerPhone,
-      city: customerCity,
-    }).returning();
-    customerId = newCust.id;
-  }
-
-  const [order] = await db.insert(ordersTable).values({
-    storeId: page.storeId,
-    landingPageId: page.id,
-    productImageUrl,
-    customerId,
-    customerName,
-    customerPhone,
-    customerCity,
-    customerAddress,
-    deliveryZoneId: deliveryZone.id,
-    deliveryWilayaCode: deliveryZone.wilayaCode,
-    deliveryWilayaName: sourceWilaya.name,
-    deliveryCommuneName: commune.name,
-    deliveryDairaName: commune.dairaName,
-    deliveryMethod: effectiveDeliveryMethod,
-    deliveryFee: String(deliveryFee),
-    returnFee: String(returnFee),
-    selectedSize,
-    selectedColor,
-    quantity,
-    unitPrice: String(unitPrice),
-    totalPrice: String(productTotal),
-    notes,
-    status: "NEW",
-  }).returning();
-
-  await logAudit({
-    storeId: page.storeId,
-    orderId: order.id,
-    action: "ORDER_CREATED",
-    toStatus: "NEW",
-    note: `طلب جديد من ${customerName} عبر صفحة ${page.productName}`,
+  const result = await createOrderCore(page, parsed.data, {
+    requireAddressForHome: false,
+    auditNote: `طلب جديد من ${parsed.data.customerName} عبر صفحة ${page.productName}`,
   });
+  if (!result.ok) {
+    return { status: result.status, body: result.body } as const;
+  }
 
   return {
     status: 201,
     body: {
-      id: order.id,
+      id: result.order.id,
       productName: page.productName,
-      totalPrice: productTotal,
-      deliveryFee,
-      payableTotal: productTotal + deliveryFee,
-      status: order.status,
+      totalPrice: Number(result.order.totalPrice),
+      deliveryFee: result.deliveryFee,
+      payableTotal: result.payableTotal,
+      status: result.order.status,
     },
   } as const;
 }

@@ -31,6 +31,7 @@ export * from "./landingPageTemplate.js";
 export * from "./landingPageUpdate.js";
 export * from "./landingPageUpdateGalleryDisplay.js";
 export * from "./landingPageUpdateTemplate.js";
+export * from "./manualOrderInput.js";
 export * from "./order.js";
 export * from "./orderInput.js";
 export * from "./ordersPage.js";

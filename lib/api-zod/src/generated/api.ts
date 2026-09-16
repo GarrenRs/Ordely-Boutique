@@ -780,6 +780,27 @@ export const CreateOrderBody = zod.object({
 });
 
 /**
+ * @summary Create a manual order (merchant enters a received COD order)
+ */
+export const CreateManualOrderParams = zod.object({
+  storeId: zod.coerce.number(),
+});
+
+export const ManualOrderBody = zod.object({
+  landingPageId: zod.number().int().positive(),
+  customerName: zod.string().min(2).max(100),
+  customerPhone: zod.string().min(9).max(20),
+  customerAddress: zod.string().max(500).optional(),
+  deliveryZoneId: zod.number().int().positive(),
+  deliveryCommuneName: zod.string().min(1).max(100),
+  deliveryMethod: zod.enum(["HOME", "OFFICE"]),
+  selectedSize: zod.string().max(50).optional(),
+  selectedColor: zod.string().max(50).optional(),
+  quantity: zod.number().int().min(1).max(10).default(1),
+  notes: zod.string().max(1000).optional(),
+});
+
+/**
  * @summary Get an order
  */
 export const GetOrderParams = zod.object({

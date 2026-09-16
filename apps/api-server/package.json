@@ -11,6 +11,7 @@
     "test:lifecycle": "node ./test-lifecycle.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/tests/lifecycle.test.mjs",
     "test:return": "node ./test-return.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/tests/return.test.mjs",
     "test:tracking": "node ./test-tracking.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/tests/tracking.test.mjs",
+    "test:manual-order": "node ./test-manual-order.mjs && node --env-file-if-exists=../../.env --enable-source-maps ./dist/tests/manual-order.test.mjs",
     "typecheck": "tsc --build tsconfig.json --force"
   },
   "dependencies": {

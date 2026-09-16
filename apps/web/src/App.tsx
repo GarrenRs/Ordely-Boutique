@@ -9,6 +9,7 @@ import ProviderLayout from "@/components/ProviderLayout";
 import Dashboard from "@/pages/Dashboard";
 import OrdersList from "@/pages/OrdersList";
 import OrderDetail from "@/pages/OrderDetail";
+import NewOrder from "@/pages/NewOrder";
 import LandingPagesList from "@/pages/LandingPagesList";
 import LandingPageForm from "@/pages/LandingPageForm";
 import CustomersList from "@/pages/CustomersList";
@@ -55,6 +56,7 @@ function AdminRouter() {
         <Route path="/" component={Dashboard} />
         <Route path="/orders/confirmations" component={OrdersConfirmationsRoute} />
         <Route path="/orders" component={OrdersRoute} />
+        <Route path="/orders/new" component={NewOrder} />
         <Route path="/orders/:orderId" component={OrderDetail} />
         <Route path="/confirmations" component={LegacyConfirmationsRedirect} />
         <Route path="/landing-pages" component={LandingPagesList} />

@@ -540,6 +540,20 @@ export interface OrderInput {
   notes?: string;
 }
 
+export interface ManualOrderInput {
+  landingPageId: number;
+  customerName: string;
+  customerPhone: string;
+  customerAddress?: string;
+  deliveryZoneId: number;
+  deliveryCommuneName: string;
+  deliveryMethod: DeliveryMethod;
+  selectedSize?: string;
+  selectedColor?: string;
+  quantity?: number;
+  notes?: string;
+}
+
 export interface OrderUpdate {
   status?: OrderStatus;
   /** @nullable */

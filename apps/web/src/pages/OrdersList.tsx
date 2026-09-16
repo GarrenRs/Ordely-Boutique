@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
-import { Calendar, Search } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Calendar, Plus, Search } from "lucide-react";
 import { getListOrdersQueryKey, useListOrders } from "@workspace/api-client-react";
 import { useStoreId } from "@/context/AuthContext";
 import StatusBadge from "@/components/StatusBadge";
@@ -67,7 +67,7 @@ export default function OrdersList({ initialView = "orders" }: { initialView?: "
 
   return (
     <div className="p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">الطلبات</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -76,6 +76,14 @@ export default function OrdersList({ initialView = "orders" }: { initialView?: "
               : `${data?.total ?? 0} طلب`}
           </p>
         </div>
+        <Link
+          href="/orders/new"
+          data-testid="btn-new-order"
+          className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity inline-flex items-center gap-2 shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          طلب جديد
+        </Link>
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2 rounded-lg border border-card-border bg-card p-1.5">

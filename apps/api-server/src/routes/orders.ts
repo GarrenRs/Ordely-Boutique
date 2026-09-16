@@ -1,10 +1,8 @@
 import { Router } from "express";
 import type { AppRequest, AppResponse } from "../types/http.js";
-import { and, auditLogsTable, customersTable, db, deliveryZonesTable, eq, landingPagesTable, ne, ordersTable, sql, storesTable } from "@workspace/db";
+import { and, auditLogsTable, customersTable, db, eq, landingPagesTable, ne, ordersTable, sql } from "@workspace/db";
 import {
   ListOrdersParams,
-  CreateOrderParams,
-  CreateOrderBody,
   GetOrderParams,
   UpdateOrderParams,
   UpdateOrderBody,
@@ -12,64 +10,10 @@ import {
 } from "@workspace/api-zod";
 import { isValidTransition } from "../lib/transitions.js";
 import { logAudit } from "../lib/audit.js";
-import { computeStoreLifecycle } from "../lib/storeLifecycle.js";
+import { firstProductImage, formatOrder } from "../lib/order-format.js";
+import { executeManualOrder } from "../lib/manual-order.js";
 
 export const ordersRouter = Router({ mergeParams: true });
-
-function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function firstProductImage(page: { productImages?: unknown; imageUrl?: string | null } | null | undefined): string | null {
-  if (!page) return null;
-  return asStringArray(page.productImages)[0] ?? page.imageUrl ?? null;
-}
-
-function formatOrder(
-  o: Record<string, unknown>,
-  landingPageName?: string | null,
-  landingPageImage?: string | null,
-  transportMode?: string | null,
-) {
-  return {
-    ...o,
-    unitPrice: Number(o.unitPrice),
-    totalPrice: Number(o.totalPrice),
-    customerAddress: o.customerAddress ?? null,
-    deliveryZoneId: o.deliveryZoneId ?? null,
-    deliveryWilayaCode: o.deliveryWilayaCode ?? null,
-    deliveryWilayaName: o.deliveryWilayaName ?? null,
-    deliveryCommuneName: o.deliveryCommuneName ?? null,
-    deliveryDairaName: o.deliveryDairaName ?? null,
-    deliveryMethod: o.deliveryMethod ?? null,
-    transportMode: transportMode ?? "DELIVERY_COMPANY",
-    deliveryFee: Number(o.deliveryFee ?? 0),
-    returnFee: Number(o.returnFee ?? 0),
-    payableTotal: Number(o.totalPrice ?? 0) + Number(o.deliveryFee ?? 0),
-    selectedSize: o.selectedSize ?? null,
-    selectedColor: o.selectedColor ?? null,
-    customerId: o.customerId ?? null,
-    notes: o.notes ?? null,
-    confirmedAt: o.confirmedAt ?? null,
-    shippedAt: o.shippedAt ?? null,
-    deliveredAt: o.deliveredAt ?? null,
-    returnedAt: o.returnedAt ?? null,
-    returnReason: o.returnReason ?? null,
-    landingPageName: landingPageName ?? null,
-    productImageUrl: o.productImageUrl ?? landingPageImage ?? null,
-  };
-}
-
-function validateVariantSelection(
-  options: string[],
-  selected: string | null | undefined,
-  label: string,
-): string | null {
-  if (!options.length) return null;
-  if (!selected) return `${label} is required for this product`;
-  if (!options.includes(selected)) return `${label} is not available for this product`;
-  return null;
-}
 
 ordersRouter.get("/summary", async (req: AppRequest, res: AppResponse): Promise<void> => {
   const params = GetOrdersSummaryParams.safeParse({
@@ -160,133 +104,15 @@ ordersRouter.get("/", async (req: AppRequest, res: AppResponse): Promise<void> =
 });
 
 ordersRouter.post("/", async (req: AppRequest, res: AppResponse): Promise<void> => {
-  const params = CreateOrderParams.safeParse({
-    storeId: Number((req.params as { storeId?: string }).storeId),
-  });
-  const body = CreateOrderBody.safeParse(req.body);
-  if (!params.success || !body.success) { res.status(400).json({ error: "Invalid request" }); return; }
+  const storeId = Number((req.params as { storeId?: string }).storeId);
+  const outcome = await executeManualOrder(storeId, req.body);
+  res.status(outcome.status).json(outcome.body);
+});
 
-  const [store] = await db.select().from(storesTable).where(eq(storesTable.id, params.data.storeId));
-  const lifecycle = store ? computeStoreLifecycle(store) : null;
-  if (lifecycle && lifecycle.status === "EXPIRED") {
-    res.status(422).json({ error: "اشتراك المتجر منتهي" });
-    return;
-  }
-  if (lifecycle && lifecycle.status === "SUSPENDED") {
-    res.status(422).json({ error: "المتجر موقوف حالياً ولا يقبل طلبات جديدة" });
-    return;
-  }
-
-  const [page] = await db
-    .select()
-    .from(landingPagesTable)
-    .where(and(eq(landingPagesTable.id, body.data.landingPageId), eq(landingPagesTable.storeId, params.data.storeId)));
-  if (!page) { res.status(404).json({ error: "Landing page not found" }); return; }
-
-  const sizeError = validateVariantSelection(asStringArray(page.availableSizes), body.data.selectedSize, "selectedSize");
-  const colorError = validateVariantSelection(asStringArray(page.availableColors), body.data.selectedColor, "selectedColor");
-  if (sizeError || colorError) {
-    res.status(422).json({ error: sizeError ?? colorError });
-    return;
-  }
-
-  const unitPrice = Number(page.price);
-  const totalPrice = unitPrice * (body.data.quantity ?? 1);
-  const productImageUrl = firstProductImage(page);
-  const requestedDelivery = body.data as typeof body.data & {
-    deliveryZoneId?: number;
-    deliveryMethod?: "HOME" | "OFFICE";
-  };
-  const effectiveDeliveryMethod = page.transportMode === "SHED_MED" ? "OFFICE" : requestedDelivery.deliveryMethod;
-  let deliverySnapshot = {
-    deliveryZoneId: null as number | null,
-    deliveryWilayaCode: null as string | null,
-    deliveryWilayaName: null as string | null,
-    deliveryMethod: null as "HOME" | "OFFICE" | null,
-    deliveryFee: 0,
-    returnFee: 0,
-  };
-
-  if (requestedDelivery.deliveryZoneId && effectiveDeliveryMethod) {
-    const [deliveryZone] = await db
-      .select()
-      .from(deliveryZonesTable)
-      .where(and(
-        eq(deliveryZonesTable.id, requestedDelivery.deliveryZoneId),
-        eq(deliveryZonesTable.storeId, params.data.storeId),
-        eq(deliveryZonesTable.isActive, true),
-      ));
-
-    if (!deliveryZone) {
-      res.status(422).json({ error: "Delivery zone is not available" });
-      return;
-    }
-
-    if (deliveryZone.officeFee === null || (effectiveDeliveryMethod === "HOME" && deliveryZone.homeFee === null)) {
-      res.status(422).json({ error: "Delivery method is not available for this zone" });
-      return;
-    }
-
-    const baseDeliveryFee = Number(deliveryZone.officeFee);
-    const deliveryFee = effectiveDeliveryMethod === "HOME"
-      ? baseDeliveryFee + Number(deliveryZone.homeFee)
-      : baseDeliveryFee;
-
-    deliverySnapshot = {
-      deliveryZoneId: deliveryZone.id,
-      deliveryWilayaCode: deliveryZone.wilayaCode,
-      deliveryWilayaName: deliveryZone.wilayaName,
-      deliveryMethod: effectiveDeliveryMethod,
-      deliveryFee,
-      returnFee: Number(deliveryZone.returnFee),
-    };
-  }
-
-  let customerId: number | null = null;
-  const [existingCustomer] = await db.select().from(customersTable)
-    .where(and(eq(customersTable.storeId, params.data.storeId), eq(customersTable.phone, body.data.customerPhone)));
-
-  if (existingCustomer) {
-    customerId = existingCustomer.id;
-    await db.update(customersTable)
-      .set({ name: body.data.customerName, city: body.data.customerCity })
-      .where(and(eq(customersTable.id, existingCustomer.id), eq(customersTable.storeId, params.data.storeId)));
-  } else {
-    const [newCustomer] = await db.insert(customersTable).values({
-      storeId: params.data.storeId,
-      name: body.data.customerName,
-      phone: body.data.customerPhone,
-      city: body.data.customerCity,
-    }).returning();
-    customerId = newCustomer.id;
-  }
-
-  const [order] = await db.insert(ordersTable).values({
-    storeId: params.data.storeId,
-    landingPageId: body.data.landingPageId,
-    productImageUrl,
-    customerId,
-    customerName: body.data.customerName,
-    customerPhone: body.data.customerPhone,
-    customerCity: deliverySnapshot.deliveryWilayaName ?? body.data.customerCity,
-    customerAddress: body.data.customerAddress,
-    deliveryZoneId: deliverySnapshot.deliveryZoneId,
-    deliveryWilayaCode: deliverySnapshot.deliveryWilayaCode,
-    deliveryWilayaName: deliverySnapshot.deliveryWilayaName,
-    deliveryMethod: deliverySnapshot.deliveryMethod,
-    deliveryFee: String(deliverySnapshot.deliveryFee),
-    returnFee: String(deliverySnapshot.returnFee),
-    selectedSize: body.data.selectedSize,
-    selectedColor: body.data.selectedColor,
-    quantity: body.data.quantity ?? 1,
-    unitPrice: String(unitPrice),
-    totalPrice: String(totalPrice),
-    notes: body.data.notes,
-    status: "NEW",
-  }).returning();
-
-  await logAudit({ storeId: params.data.storeId, orderId: order.id, action: "ORDER_CREATED", toStatus: "NEW" });
-  res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, page.productName, productImageUrl, page.transportMode));
+ordersRouter.post("/manual", async (req: AppRequest, res: AppResponse): Promise<void> => {
+  const storeId = Number((req.params as { storeId?: string }).storeId);
+  const outcome = await executeManualOrder(storeId, req.body);
+  res.status(outcome.status).json(outcome.body);
 });
 
 ordersRouter.get("/:orderId/audit", async (req: AppRequest, res: AppResponse): Promise<void> => {

@@ -707,7 +707,7 @@ paths:
     post:
       operationId: createOrder
       tags: [orders]
-      summary: Create an order (from landing page)
+      summary: Create a manual order from the merchant dashboard
       parameters:
         - name: storeId
           in: path
@@ -719,7 +719,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrderInput"
+              $ref: "#/components/schemas/ManualOrderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /stores/{storeId}/orders/manual:
+    post:
+      operationId: createManualOrder
+      tags: [orders]
+      summary: Create a manual order (merchant enters a received COD order)
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualOrderInput"
       responses:
         "201":
           description: Created
@@ -1816,6 +1841,36 @@ components:
           type: string
         quantity:
           type: integer
+        notes:
+          type: string
+
+    ManualOrderInput:
+      type: object
+      required: [landingPageId, customerName, customerPhone, deliveryZoneId, deliveryCommuneName, deliveryMethod]
+      properties:
+        landingPageId:
+          type: integer
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        customerAddress:
+          type: string
+        deliveryZoneId:
+          type: integer
+        deliveryCommuneName:
+          type: string
+        deliveryMethod:
+          $ref: "#/components/schemas/DeliveryMethod"
+        selectedSize:
+          type: string
+        selectedColor:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
         notes:
           type: string
 

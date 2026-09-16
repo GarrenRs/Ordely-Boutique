@@ -33,7 +33,8 @@ import type {
   LandingPageInput,
   LandingPageUpdate,
   Order,
-  OrderInput,
+OrderInput,
+  ManualOrderInput,
   OrderUpdate,
   OrdersPage,
   OrdersSummary,
@@ -2893,6 +2894,90 @@ export type CreateOrderMutationResult = NonNullable<
 >;
 export type CreateOrderMutationBody = BodyType<OrderInput>;
 export type CreateOrderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a manual order (merchant enters a received COD order)
+ */
+export const getCreateManualOrderUrl = (storeId: number) => {
+  return `/api/stores/${storeId}/orders/manual`;
+};
+
+export const createManualOrder = async (
+  storeId: number,
+  manualOrderInput: ManualOrderInput,
+  options?: RequestInit,
+): Promise<Order> => {
+  return customFetch<Order>(getCreateManualOrderUrl(storeId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(manualOrderInput),
+  });
+};
+
+export const getCreateManualOrderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManualOrder>>,
+    TError,
+    { storeId: number; data: BodyType<ManualOrderInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createManualOrder>>,
+  TError,
+  { storeId: number; data: BodyType<ManualOrderInput> },
+  TContext
+> => {
+  const mutationKey = ["createManualOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createManualOrder>>,
+    { storeId: number; data: BodyType<ManualOrderInput> }
+  > = (props) => {
+    const { storeId, data } = props ?? {};
+
+    return createManualOrder(storeId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateManualOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createManualOrder>>
+>;
+export type CreateManualOrderMutationBody = BodyType<ManualOrderInput>;
+export type CreateManualOrderMutationError = ErrorType<unknown>;
+
+export const useCreateManualOrder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManualOrder>>,
+    TError,
+    { storeId: number; data: BodyType<ManualOrderInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createManualOrder>>,
+  TError,
+  { storeId: number; data: BodyType<ManualOrderInput> },
+  TContext
+> => {
+  return useMutation(getCreateManualOrderMutationOptions(options));
+};
 
 /**
  * @summary Create an order (from landing page)
