@@ -1,5 +1,13 @@
 # Phase 5 — P1 Bug Fix + Regression Report
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > Date: 2026-09-15 | Scope: fix the `product-categories` 500 bug (P1) with the minimal, race-safe code change. No schema, data, architecture or destructive operations.
 
 ---

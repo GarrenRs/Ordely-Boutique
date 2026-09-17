@@ -15,8 +15,10 @@ lib/
   api-client-react/   Generated React Query client
   api-zod/            Generated Zod schemas
 
-docs/          Product and architecture constraints
+Docs/          Documentation home (start at Docs/INDEX.md)
 ```
+
+> **الوثائق:** ابدأ من `Docs/INDEX.md` (الحالة الحالية، القرارات، المواصفات، التشغيل). `Docs/current/` هي الطبقة المرجعية الحية؛ سجلات المراحل والتقارير في جذر `Docs/` تاريخية ولا تُعدَّل.
 
 ## إعداد Supabase
 

@@ -1,5 +1,13 @@
 # Phase 10.3 - تقرير تنفيذ الإرجاع بعد التسليم (P1-03)
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 التاريخ: 15-09-2026
 النطاق: تنفيذ P1-03 فقط وفق المواصفة المعتمدة في `Docs/PHASE-9-PRODUCT-GAP-SPECIFICATION.md` (القسم 4). لا يشمل هذا التقرير أي عنصر آخر من Phase 10.
 

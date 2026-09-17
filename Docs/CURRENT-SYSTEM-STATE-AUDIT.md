@@ -1,5 +1,14 @@
 # CURRENT-SYSTEM-STATE-AUDIT
 
+<!-- DOC-META
+type: audit
+status: historical
+verified-as-of: 2026-09-15
+superseded-by: Docs/current/STATE-SYSTEM.md
+planned-replacement: Docs/current/STATE-SYSTEM.md
+related: Docs/ARCHITECTURAL-AUDIT.md
+-->
+
 **Project:** Ordely (conversational-order-os)
 **Audit date:** 2026-09-15
 **Auditor:** opencode (discovery-only phase — **no code, data, schema, credentials, or deployment modified**)

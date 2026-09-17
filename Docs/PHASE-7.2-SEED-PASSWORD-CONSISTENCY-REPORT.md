@@ -1,5 +1,13 @@
 # Phase 7.2 — Seed Password Consistency & Verification Report
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > **Scope:** Resolve the password-hash consistency issue (P2 #3 from Phase 4/6) for **future provisioning only**. No existing hashes were modified, no passwords rotated, no user/store/provider rows mutated, no destructive SQL run, no showcase reseed. Fix = align **every** password-hashing site to one canonical bcryptjs cost **12** via a single shared utility in the app and aligned constants in the standalone `.mjs` scripts.
 
 ---

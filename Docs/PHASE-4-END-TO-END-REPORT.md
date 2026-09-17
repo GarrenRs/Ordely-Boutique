@@ -1,5 +1,13 @@
 # Phase 4 — End-to-End Verification Report (التقرير النهائي للتحقق الشامل)
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > Date run: 2026-09-15 | Environment: local (Vite `:5173` → API `:8080` → PostgreSQL Supabase `kofvrrcixoakvwjlmhzm`) | No application source code was modified during this phase.
 
 ---

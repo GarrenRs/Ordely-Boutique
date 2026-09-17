@@ -1,5 +1,13 @@
 # Phase 6 — Production-Hardening Baseline
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > **Scope:** Entirely **READ-ONLY** inventory of the Ordely system as it stands on **2026-09-15**, after Phase 4 (end-to-end verification) and Phase 5 (P1 fix + regression). This document is the exact starting point for **Phase 7 (production hardening fix phase)**.
 >
 > **Constraint compliance:** No source code was modified, no DB row was inserted/updated/deleted, no schema was changed, no destructive command was run, no showcase reseed was executed, and the Provider manual verification was **not** repeated (done by the operator in the UI already). This phase only ran read-only queries, the standard build pipeline, and inspection commands.

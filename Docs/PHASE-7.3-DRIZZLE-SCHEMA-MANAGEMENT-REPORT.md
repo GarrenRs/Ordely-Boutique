@@ -1,5 +1,13 @@
 # Phase 7.3 — Drizzle Schema Management Repair Report
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > **Scope:** Make `drizzle-kit push` work reliably against the live TypeScript schema. Root cause was the schema code importing sibling files with `./x.js` relative specifiers while only `./x.ts` files exist — drizzle-kit 0.31.9's CJS/require-based loader does not rewrite `.js` → `.ts`. Fix: normalize those relative specifiers to extensionless, which is valid for the project's `moduleResolution: bundler` tsc/esbuild build and lets drizzle-kit resolve the `.ts` files directly. **No schema definitions were changed, no destructive SQL was run, no DB structure was touched.**
 
 ---

@@ -1,5 +1,13 @@
 # Phase 10.5 — Manual Order Entry (P2-01) Report
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 ## 1. Root cause
 
 The merchant had no way to log manually received COD orders into the system. The only order entry path was the public storefront flow (visitor-facing). This forced merchants to track off-platform orders separately, causing data gaps and inconsistent reporting.

@@ -1,4 +1,12 @@
-﻿# Phase 7.4 - P3 Cleanup Report: Logout Cookie + Dependency + Orphan Script
+# Phase 7.4 - P3 Cleanup Report: Logout Cookie + Dependency + Orphan Script
+
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
 
 > **Scope:** Three P3 cleanups only - (A) fix the logout cookie-name mismatch, (B) remove the unused native `bcrypt` dependency and its config, (C) audit and resolve the orphaned `ensure-store-subscriptions` script. No schema/business-data/auth-architecture changes.
 >

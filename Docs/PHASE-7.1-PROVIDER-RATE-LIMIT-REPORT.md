@@ -1,5 +1,13 @@
 # Phase 7.1 — Provider Login Rate-Limit Hardening Report
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > **Scope:** The single confirmed P2 issue — `POST /api/provider/auth/login` had **no rate limiter**. Fixed with the smallest possible change by reusing the existing shared `loginLimiter`. No architecture change, no schema change, no credential change. Follows directly from the Phase 6 baseline (`Docs/PHASE-6-HARDENING-BASELINE.md`, §8 row 2).
 
 ---

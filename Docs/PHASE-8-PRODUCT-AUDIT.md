@@ -1,5 +1,13 @@
 # Phase 8 - Product Audit (Visual + Business + Lifecycle)
 
+<!-- DOC-META
+type: audit
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > **Scope:** Discovery-only product audit of the closed Ordely baseline. No source code, database, deployment, or business-data changes were made. No features added.
 >
 > **Method:** Full read of `apps/web` (routes, pages, components, contexts), `apps/api-server` (all routes, middleware, lib), `lib/db` (schema, scripts), `lib/api-spec/openapi.yaml`, and the compiled API spec. Each finding carries `file:line` evidence.

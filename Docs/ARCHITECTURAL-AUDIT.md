@@ -1,5 +1,14 @@
 # Ordely — Complete Architectural Audit
 
+<!-- DOC-META
+type: audit
+status: historical
+verified-as-of: 2026-09-15
+superseded-by: Docs/current/STATE-ARCHITECTURE.md
+planned-replacement: Docs/current/STATE-ARCHITECTURE.md
+related: Docs/CURRENT-SYSTEM-STATE-AUDIT.md
+-->
+
 **Repository:** `conversational-order-os` (pnpm workspace v11, TypeScript ~5.9, React 19)
 **Date:** 2026-09-15 | Live origin: `https://ordely.vercel.app`
 

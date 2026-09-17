@@ -1,5 +1,13 @@
 # Phase 7.5 - Repository Publication Report
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 > **Objective:** Prepare the closed working baseline as the official source repository.
 >
 > **Scope:** Repository content audit, gitignore hardening, .env.example creation, secret scan, clean publication, build verification. No application/business-logic changes.

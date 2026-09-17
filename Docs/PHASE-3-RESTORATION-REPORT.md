@@ -1,5 +1,13 @@
 # PHASE 3 — RESTORATION REPORT
 
+<!-- DOC-META
+type: phase-report
+status: historical
+verified-as-of: 2026-09-17
+related: Docs/INDEX.md
+notes: Closure stamp. Immutable historical record - not current truth. See Docs/current/ and Docs/decisions/ for the living model.
+-->
+
 **Date:** 2026-09-15
 **Status:** Steps 1–5 complete. Step 6 (showcase seed) awaiting explicit approval.
 **Scope:** idempotent DB restoration, provider access verification, storage action item, showcase readiness.
