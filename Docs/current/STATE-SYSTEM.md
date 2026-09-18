@@ -20,7 +20,7 @@ supersedes: Docs/CURRENT-SYSTEM-STATE-AUDIT.md
 
 - **Remote:** `https://github.com/GarrenRs/Ordely-Boutique.git`, branch `main`.
 - **Workspace:** pnpm monorepo (`packageManager: pnpm@11.1.2`), TypeScript ~5.9, React 19, Express 5.
-- **Commit history (master line):** `e27eec2` initial → `22d2227` publication baseline → `d133c85` Phase 8 audit → `e49f3d0` Phase 10.1-10.3 → `f2f9011` Phase 10.4 tracking → `d9e8c6a` **Phase 10.5 manual order (current HEAD)**.
+- **Commit history (master line):** `e27eec2` initial → `22d2227` publication baseline → `d133c85` Phase 8 audit → `e49f3d0` Phase 10.1-10.3 → `f2f9011` Phase 10.4 tracking → `d9e8c6a` Phase 10.5 manual order → `e047f53` docs baseline (final physiological/system audit) → **Layer A remediation (5 fixes, current)**.
 - Provenance: `PHASE-7.5-REPOSITORY-PUBLICATION-REPORT.md`.
 
 ## 3. Environments
@@ -67,9 +67,10 @@ supersedes: Docs/CURRENT-SYSTEM-STATE-AUDIT.md
 - **Auth:** session-based; `requireAuth` for merchants, `requireStoreAccess` scopes all `/:storeId` resources to the session store; provider route guarded by provider session.
 - **Suspended store login:** blocked (`403 "المتجر موقوف مؤقتاً. تواصل معنا."`, no session created). Expired store: restricted login allowed (existing orders operable, new orders refused `422`).
 - **Rate limits (express-rate-limit):**
-  - `loginLimiter` — 10 req / 15 min.
+  - `loginLimiter` — 10 req / 15 min (provider login).
   - `publicOrderLimiter` — 20 req / 60 min (public order creation).
   - `trackOrderLimiter` — 20 req / 10 min (public tracking).
+  - `leadLimiter` — 8 req / 60 min (public merchant-lead intake).
 - **Env secrets** (`.env`, never committed): `DATABASE_URL`, `SESSION_SECRET`, `APP_ORIGIN`, `ALLOWED_ORIGINS`, `PROVIDER_EMAIL/PASSWORD_HASH/NAME`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `PORT`/`API_PORT`.
 
 ## 6. Operations

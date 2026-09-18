@@ -8,6 +8,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   merchantLeadsTable,
   ordersTable,
   providerUsersTable,
@@ -16,10 +17,11 @@ import {
   usersTable,
 } from "@workspace/db";
 import { requireProviderAuth } from "../middleware/requireAuth.js";
-import { loginLimiter } from "../middleware/rateLimiter.js";
+import { leadLimiter, loginLimiter } from "../middleware/rateLimiter.js";
 import { hashMerchantPassword } from "../lib/password.js";
 import { reseedShowcaseStore } from "../lib/showcaseSeed.js";
 import { computeStoreLifecycle, computeRenewalExpiry, providerSubscriptionStatus } from "../lib/storeLifecycle.js";
+import { effectiveActiveStoreSql } from "../lib/readiness.js";
 import { z } from "zod";
 
 export const providerRouter = Router();
@@ -103,8 +105,6 @@ function parseSubscriptionDays(value: unknown) {
   const days = Number(value);
   return SUBSCRIPTION_PLAN_DAYS.includes(days as (typeof SUBSCRIPTION_PLAN_DAYS)[number]) ? days : null;
 }
-
-const effectiveActiveStoreSql = sql`${storesTable.isActive} = true and (${storesTable.subscriptionExpiresAt} is null or ${storesTable.subscriptionExpiresAt} > now())`;
 
 async function uniqueStoreSlug(preferred: string, fallback: string) {
   const base = slugBase(preferred) || slugBase(fallback) || "store";
@@ -217,10 +217,32 @@ providerRouter.get("/auth/me", (req: AppRequest, res: AppResponse): void => {
   });
 });
 
-providerRouter.post("/leads", async (req: AppRequest, res: AppResponse): Promise<void> => {
+providerRouter.post("/leads", leadLimiter, async (req: AppRequest, res: AppResponse): Promise<void> => {
   const parsed = MerchantLeadSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "بيانات الطلب غير صحيحة", details: parsed.error.issues });
+    return;
+  }
+
+  const activeStatuses = ["NEW", "CONTACTED", "QUALIFIED"] as const;
+  const [byEmail] = await db
+    .select({ id: merchantLeadsTable.id })
+    .from(merchantLeadsTable)
+    .where(and(
+      eq(merchantLeadsTable.email, normalizeEmail(parsed.data.email)),
+      inArray(merchantLeadsTable.status, activeStatuses),
+    ))
+    .limit(1);
+  const [byPhone] = await db
+    .select({ id: merchantLeadsTable.id })
+    .from(merchantLeadsTable)
+    .where(and(
+      eq(merchantLeadsTable.phone, parsed.data.phone),
+      inArray(merchantLeadsTable.status, activeStatuses),
+    ))
+    .limit(1);
+  if (byEmail || byPhone) {
+    res.status(409).json({ error: "تم استلام طلبك مسبقاً، سيتواصل معك فريقنا قريباً" });
     return;
   }
 

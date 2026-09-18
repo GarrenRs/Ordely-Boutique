@@ -30,6 +30,7 @@ function buildConfirmationMessage(order: {
   selectedColor?: string | null;
   quantity: number;
   totalPrice: number;
+  payableTotal?: number | null;
 }) {
   const variantLines = [
     order.selectedSize ? `الخيار الرئيسي: ${order.selectedSize}` : null,
@@ -40,7 +41,7 @@ function buildConfirmationMessage(order: {
 تم استلام طلبك رقم #${order.id} بنجاح.
 المنتج: ${order.landingPageName ?? "المنتج"}
 ${variantLines ? `${variantLines}\n` : ""}الكمية: ${order.quantity} قطعة
-المبلغ الإجمالي: ${formatCurrency(order.totalPrice)}
+المبلغ الإجمالي: ${formatCurrency(order.payableTotal ?? order.totalPrice)}
 
 سيتم التواصل معك قريباً لترتيب التوصيل. شكراً لثقتك بنا!`;
 }

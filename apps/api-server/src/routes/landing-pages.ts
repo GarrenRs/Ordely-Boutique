@@ -12,12 +12,9 @@ import {
 } from "@workspace/api-zod";
 import { ensureDefaultCategory } from "../lib/ensureDefaultCategory.js";
 import { productReadinessReasonWithContext, usableDeliveryZonesForStore } from "../lib/readiness.js";
+import { asStringArray } from "../lib/order-format.js";
 
 export const landingPagesRouter = Router({ mergeParams: true });
-
-function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
 
 async function resolveCategoryId(storeId: number, categoryId: number | null | undefined): Promise<number | null> {
   if (categoryId === null || categoryId === undefined) {

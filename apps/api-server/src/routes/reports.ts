@@ -12,22 +12,6 @@ async function buildDailyReport(storeId: number, dateStr: string) {
   const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
   const dayEnd = new Date(`${dateStr}T23:59:59.999Z`);
 
-  const rows = await db
-    .select({
-      status: ordersTable.status,
-      count: sql<number>`count(*)::int`,
-      revenue: sql<number>`coalesce(sum(total_price)::float, 0)`,
-      deliveryRevenue: sql<number>`coalesce(sum(delivery_fee)::float, 0)`,
-      returnLoss: sql<number>`coalesce(sum(return_fee)::float, 0)`,
-    })
-    .from(ordersTable)
-    .where(and(
-      eq(ordersTable.storeId, storeId),
-      gte(ordersTable.createdAt, dayStart),
-      lt(ordersTable.createdAt, dayEnd)
-    ))
-    .groupBy(ordersTable.status);
-
   const report = {
     date: dateStr,
     totalOrders: 0,
@@ -45,24 +29,58 @@ async function buildDailyReport(storeId: number, dateStr: string) {
     netRevenue: 0,
   };
 
-  for (const row of rows) {
-    report.totalOrders += row.count;
-    if (row.status === "NEW") report.newOrders = row.count;
-    if (row.status === "PENDING_CONFIRMATION") report.pendingConfirmation = row.count;
-    if (row.status === "CONFIRMED") report.confirmed = row.count;
-    if (row.status === "SHIPPED") report.shipped = row.count;
-    if (row.status === "DELIVERED") {
-      report.delivered = row.count;
-      report.revenue += Number(row.revenue) || 0;
-      report.deliveryRevenue += Number(row.deliveryRevenue) || 0;
-    }
-    if (row.status === "RETURNED") {
-      report.returned = row.count;
-      report.returnLoss += Number(row.returnLoss) || 0;
-    }
-    if (row.status === "CANCELLED") report.cancelled = row.count;
-    if (row.status === "REJECTED") report.rejected = row.count;
+  type EventDateColumn =
+    | typeof ordersTable.createdAt
+    | typeof ordersTable.confirmedAt
+    | typeof ordersTable.shippedAt
+    | typeof ordersTable.deliveredAt
+    | typeof ordersTable.returnedAt;
+
+  type OrderStatus = typeof ordersTable.$inferSelect.status;
+
+  async function eventRows(status: OrderStatus, column: EventDateColumn) {
+    const [row] = await db
+      .select({
+        count: sql<number>`count(*)::int`,
+        revenue: sql<number>`coalesce(sum(${ordersTable.totalPrice})::float, 0)`,
+        deliveryRevenue: sql<number>`coalesce(sum(${ordersTable.deliveryFee})::float, 0)`,
+        returnLoss: sql<number>`coalesce(sum(${ordersTable.returnFee})::float, 0)`,
+      })
+      .from(ordersTable)
+      .where(and(
+        eq(ordersTable.storeId, storeId),
+        eq(ordersTable.status, status),
+        gte(column, dayStart),
+        lt(column, dayEnd),
+      ));
+    return row;
   }
+
+  const [createdRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(ordersTable)
+    .where(and(eq(ordersTable.storeId, storeId), gte(ordersTable.createdAt, dayStart), lt(ordersTable.createdAt, dayEnd)));
+  report.totalOrders = createdRow.count;
+
+  const newRows = await eventRows("NEW", ordersTable.createdAt);
+  report.newOrders = newRows.count;
+  const pendingRows = await eventRows("PENDING_CONFIRMATION", ordersTable.createdAt);
+  report.pendingConfirmation = pendingRows.count;
+  const confirmedRows = await eventRows("CONFIRMED", ordersTable.confirmedAt);
+  report.confirmed = confirmedRows.count;
+  const shippedRows = await eventRows("SHIPPED", ordersTable.shippedAt);
+  report.shipped = shippedRows.count;
+  const deliveredRows = await eventRows("DELIVERED", ordersTable.deliveredAt);
+  report.delivered = deliveredRows.count;
+  report.revenue = Number(deliveredRows.revenue) || 0;
+  report.deliveryRevenue = Number(deliveredRows.deliveryRevenue) || 0;
+  const returnedRows = await eventRows("RETURNED", ordersTable.returnedAt);
+  report.returned = returnedRows.count;
+  report.returnLoss = Number(returnedRows.returnLoss) || 0;
+  const cancelledRows = await eventRows("CANCELLED", ordersTable.createdAt);
+  report.cancelled = cancelledRows.count;
+  const rejectedRows = await eventRows("REJECTED", ordersTable.createdAt);
+  report.rejected = rejectedRows.count;
 
   report.netRevenue = report.revenue + report.deliveryRevenue - report.returnLoss;
 

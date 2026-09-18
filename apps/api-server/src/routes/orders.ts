@@ -234,6 +234,28 @@ ordersRouter.patch("/:orderId", async (req: AppRequest, res: AppResponse): Promi
     });
   }
 
+  const edits: string[] = [];
+  if (body.data.customerPhone !== undefined && body.data.customerPhone !== existing.customerPhone) {
+    edits.push(`الهاتف: ${existing.customerPhone} ← ${body.data.customerPhone}`);
+  }
+  if (body.data.customerCity !== undefined && body.data.customerCity !== existing.customerCity) {
+    edits.push(`المدينة: ${existing.customerCity} ← ${body.data.customerCity}`);
+  }
+  if (body.data.customerAddress !== undefined && (body.data.customerAddress ?? null) !== (existing.customerAddress ?? null)) {
+    edits.push(`العنوان: ${existing.customerAddress ?? "-"} ← ${body.data.customerAddress ?? "-"}`);
+  }
+  if (body.data.notes !== undefined && (body.data.notes ?? null) !== (existing.notes ?? null)) {
+    edits.push(`الملاحظات: ${existing.notes ?? "-"} ← ${body.data.notes ?? "-"}`);
+  }
+  if (edits.length > 0) {
+    await logAudit({
+      storeId: params.data.storeId,
+      orderId: order.id,
+      action: "ORDER_UPDATED",
+      note: edits.join("، "),
+    });
+  }
+
   const [page] = await db.select().from(landingPagesTable).where(eq(landingPagesTable.id, order.landingPageId));
   res.json(formatOrder(order as unknown as Record<string, unknown>, page?.productName ?? null, firstProductImage(page), page?.transportMode ?? null));
 });

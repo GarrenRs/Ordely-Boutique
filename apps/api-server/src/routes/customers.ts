@@ -7,17 +7,9 @@ import {
   UpdateCustomerParams,
   UpdateCustomerBody,
 } from "@workspace/api-zod";
+import { firstProductImage, formatOrder } from "../lib/order-format.js";
 
 export const customersRouter = Router({ mergeParams: true });
-
-function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function firstProductImage(page: { productImages?: unknown; imageUrl?: string | null } | null | undefined): string | null {
-  if (!page) return null;
-  return asStringArray(page.productImages)[0] ?? page.imageUrl ?? null;
-}
 
 customersRouter.get("/", async (req: AppRequest, res: AppResponse): Promise<void> => {
   const params = ListCustomersParams.safeParse({
@@ -92,6 +84,7 @@ customersRouter.get("/:customerId", async (req: AppRequest, res: AppResponse): P
       landingPageName: landingPagesTable.productName,
       landingPageImageUrl: landingPagesTable.imageUrl,
       landingPageProductImages: landingPagesTable.productImages,
+      transportMode: landingPagesTable.transportMode,
     })
     .from(ordersTable)
     .leftJoin(landingPagesTable, eq(ordersTable.landingPageId, landingPagesTable.id))
@@ -103,29 +96,12 @@ customersRouter.get("/:customerId", async (req: AppRequest, res: AppResponse): P
     notes: row.customer.notes ?? null,
     ordersCount: row.ordersCount,
     totalSpent: row.totalSpent,
-    orders: orders.map(r => ({
-      ...r.order,
-      unitPrice: Number(r.order.unitPrice),
-      totalPrice: Number(r.order.totalPrice),
-      deliveryZoneId: r.order.deliveryZoneId ?? null,
-      deliveryWilayaCode: r.order.deliveryWilayaCode ?? null,
-      deliveryWilayaName: r.order.deliveryWilayaName ?? null,
-      deliveryCommuneName: r.order.deliveryCommuneName ?? null,
-      deliveryDairaName: r.order.deliveryDairaName ?? null,
-      deliveryMethod: r.order.deliveryMethod ?? null,
-      deliveryFee: Number(r.order.deliveryFee ?? 0),
-      returnFee: Number(r.order.returnFee ?? 0),
-      payableTotal: Number(r.order.totalPrice ?? 0) + Number(r.order.deliveryFee ?? 0),
-      customerAddress: r.order.customerAddress ?? null,
-      customerId: r.order.customerId ?? null,
-      notes: r.order.notes ?? null,
-      confirmedAt: r.order.confirmedAt ?? null,
-      shippedAt: r.order.shippedAt ?? null,
-      deliveredAt: r.order.deliveredAt ?? null,
-      returnedAt: r.order.returnedAt ?? null,
-      landingPageName: r.landingPageName ?? null,
-      productImageUrl: r.order.productImageUrl ?? firstProductImage({ imageUrl: r.landingPageImageUrl, productImages: r.landingPageProductImages }),
-    })),
+    orders: orders.map(r => formatOrder(
+      r.order as unknown as Record<string, unknown>,
+      r.landingPageName,
+      firstProductImage({ imageUrl: r.landingPageImageUrl, productImages: r.landingPageProductImages }),
+      r.transportMode,
+    )),
   });
 });
 

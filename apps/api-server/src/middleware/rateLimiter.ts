@@ -26,3 +26,12 @@ export const trackOrderLimiter = rateLimit({
   message: { error: "طلبات كثيرة، حاول لاحقاً" },
   validate: { xForwardedForHeader: false },
 });
+
+export const leadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "طلبات كثيرة، حاول لاحقاً" },
+  validate: { xForwardedForHeader: false },
+});
