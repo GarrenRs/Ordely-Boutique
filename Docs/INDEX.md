@@ -24,6 +24,7 @@ notes: Documentation closure complete. Full model: current/ + decisions/ + specs
 | Order states / subscription states / readiness | `Docs/current/STATE-LIFECYCLE.md` |
 | Rules enforced in code (money, validation, auth) | `Docs/current/STATE-BUSINESS-RULES.md` |
 | What's open / deferred / future | `Docs/current/BACKLOG.md` |
+| System-wide lifecycle & opportunity analysis | `Docs/PHYSIOLOGICAL-SYSTEM-AND-OPPORTUNITY-AUDIT.md` (Physiological / Functional / Product Opportunity Study) |
 | Why a behavior is what it is | `Docs/decisions/ADR-*.md` (register below) |
 | Spec → implementation mapping | `Docs/specs/REGISTRY.md` + §4 of this file |
 | How to run DB / tests / smokes | `Docs/runbooks/RUNBOOK-DB.md`, `RUNBOOK-VERIFY.md` |
@@ -69,6 +70,7 @@ notes: Documentation closure complete. Full model: current/ + decisions/ + specs
 Docs/
 ├── INDEX.md                 you are here
 ├── GOVERNANCE.md            operating rules for the docs themselves
+├── PHYSIOLOGICAL-SYSTEM-AND-OPPORTUNITY-AUDIT.md  living study (lifecycle & opportunity analysis)
 ├── current/                 LIVING truth (edit with code)
 │   ├── STATE-SYSTEM.md          infra / env / baseline / security
 │   ├── STATE-ARCHITECTURE.md    packages / routes / flows / contracts
@@ -97,6 +99,7 @@ Docs/
 | `current/STATE-LIFECYCLE.md` | state | state machines & readiness |
 | `current/STATE-BUSINESS-RULES.md` | state | enforced domain rules |
 | `current/BACKLOG.md` | state | open/deferred work |
+| `PHYSIOLOGICAL-SYSTEM-AND-OPPORTUNITY-AUDIT.md` | study | Physiological / Functional / Product Opportunity Study — system-wide lifecycle & opportunity analysis |
 | `decisions/ADR-001…007` (7) | decision | why behaviors exist |
 | `specs/REGISTRY.md` | reference | spec classification |
 | `runbooks/RUNBOOK-DB.md` | reference | DB operations |
@@ -111,7 +114,7 @@ Docs/
 | `PHASE-9-PRODUCT-GAP-SPECIFICATION.md` | spec | **implemented** (immutable) |
 | `PHASE-10.1…10.5-…` (5) | phase-report | implemented/closed |
 
-**Total:** 18 living/authoritative + 18 historical = 36. Adding a file? Update §6 §7 and §2 routing in the same change.
+**Total:** 19 living/authoritative + 18 historical = 37. Adding a file? Update §6 §7 and §2 routing in the same change.
 
 ## 8. Maintenance rule
 
